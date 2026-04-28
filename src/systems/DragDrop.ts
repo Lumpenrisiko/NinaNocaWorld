@@ -45,3 +45,30 @@ export function refreshOrigin(
   const cur = go.data?.get(DATA_KEY) as DraggableData | undefined;
   if (cur) cur.origin = { x: go.x, y: go.y };
 }
+
+const DROP_KEY = "ninanoca:drop";
+
+export interface DropZoneData {
+  /** Discriminator for handlers. */
+  kind: "character";
+  /** Which character this drop zone belongs to. */
+  characterId: string;
+}
+
+export function makeDropZone(
+  container: Phaser.GameObjects.Container,
+  data: DropZoneData,
+): void {
+  const w = container.width;
+  const h = container.height;
+  const hit = new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h);
+  container.setInteractive(hit, Phaser.Geom.Rectangle.Contains, true);
+  container.setDataEnabled();
+  container.data.set(DROP_KEY, data);
+}
+
+export function getDropData(
+  go: Phaser.GameObjects.GameObject & { data?: Phaser.Data.DataManager },
+): DropZoneData | undefined {
+  return go.data?.get(DROP_KEY);
+}

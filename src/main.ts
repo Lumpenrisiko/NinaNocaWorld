@@ -4,6 +4,7 @@ import { BootScene } from "./scenes/BootScene";
 import { PreloadScene } from "./scenes/PreloadScene";
 import { LocationScene } from "./scenes/LocationScene";
 import { UIScene } from "./scenes/UIScene";
+import { CharacterEditorScene } from "./scenes/CharacterEditorScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
   input: {
     activePointers: 3,
   },
-  scene: [BootScene, PreloadScene, LocationScene, UIScene],
+  scene: [BootScene, PreloadScene, LocationScene, UIScene, CharacterEditorScene],
 };
 
 new Phaser.Game(config);

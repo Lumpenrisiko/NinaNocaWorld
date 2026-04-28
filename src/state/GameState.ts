@@ -2,6 +2,7 @@ import type {
   CharacterState,
   ItemInstance,
   LocationState,
+  OutfitState,
   PlacedItem,
   RoomState,
   SaveData,
@@ -53,6 +54,13 @@ class GameStateStore {
     const c = this.data.characters[charId];
     if (!c) return;
     c.position = { locationId, roomId, x: pos.x, y: pos.y };
+    this.emit();
+  }
+
+  setCharacterOutfit(charId: string, outfit: OutfitState): void {
+    const c = this.data.characters[charId];
+    if (!c) return;
+    c.outfit = { ...outfit };
     this.emit();
   }
 

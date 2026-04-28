@@ -1,5 +1,5 @@
 import type { SaveData } from "../state/types";
-import { CHARACTERS } from "../data/characters";
+import { CHARACTERS, getCharacterDef } from "../data/characters";
 import { HOME } from "../data/locations/home";
 
 let counter = 0;
@@ -34,7 +34,7 @@ export function createInitialSave(): SaveData {
             y: 460,
           },
           inventory: [],
-          outfit: {},
+          outfit: { ...getCharacterDef(id).defaultOutfit },
         },
       ]),
     ),

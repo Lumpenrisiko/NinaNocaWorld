@@ -3,12 +3,19 @@ import { GAME_HEIGHT, GAME_WIDTH, COLORS } from "../config";
 import { GameState } from "../state/GameState";
 import { getLocation } from "../data/locations";
 import { getItemDef } from "../data/items";
-import { getCharacterDef } from "../data/characters";
 import { LocationLoader } from "../systems/LocationLoader";
-import { makeDraggable, getDragData, refreshOrigin } from "../systems/DragDrop";
-import type { DraggableData } from "../systems/DragDrop";
+import {
+  makeDraggable,
+  getDragData,
+  refreshOrigin,
+  makeDropZone,
+  getDropData,
+} from "../systems/DragDrop";
+import type { DraggableData, DropZoneData } from "../systems/DragDrop";
 import type { LocationDefinition } from "../data/locations/types";
 import type { PlacedItem } from "../state/types";
+import { Character } from "../entities/Character";
+import { getCharacterDef } from "../data/characters";
 
 interface InitData {
   locationId: string;
@@ -30,7 +37,10 @@ export class LocationScene extends Phaser.Scene {
   private label!: Phaser.GameObjects.Text;
 
   private itemSprites: Phaser.GameObjects.GameObject[] = [];
-  private characterSprites: Phaser.GameObjects.GameObject[] = [];
+  private characterEntities: Character[] = [];
+
+  /** Set true by drop event so dragend skips position commit. */
+  private dropHandled = new WeakSet<object>();
 
   constructor() {
     super("Location");
@@ -65,6 +75,13 @@ export class LocationScene extends Phaser.Scene {
     this.events.on("ui:request-pickup-active-character-item", (instanceId: string) =>
       this.placeFromCharacter(instanceId),
     );
+    this.events.on("ui:open-editor", () => {
+      this.scene.launch("CharacterEditor");
+      this.scene.pause();
+    });
+    this.events.on("ui:editor-closed", () => {
+      this.scene.resume();
+    });
   }
 
   // --- room rendering ---
@@ -76,11 +93,10 @@ export class LocationScene extends Phaser.Scene {
     this.bg.fillColor = room.bgColor;
     this.label.setText(`${this.location.name} · ${room.name}`);
 
-    // Clear & redraw items + characters.
     this.itemSprites.forEach((s) => s.destroy());
     this.itemSprites = [];
-    this.characterSprites.forEach((s) => s.destroy());
-    this.characterSprites = [];
+    this.characterEntities.forEach((s) => s.destroy());
+    this.characterEntities = [];
 
     const roomState = GameState.getRoom(this.location.id, this.currentRoomId);
     for (const placed of roomState.items) {
@@ -90,7 +106,7 @@ export class LocationScene extends Phaser.Scene {
     for (const charId of Object.keys(GameState.snapshot.characters)) {
       const c = GameState.snapshot.characters[charId]!;
       if (c.position.locationId === this.location.id && c.position.roomId === this.currentRoomId) {
-        this.characterSprites.push(this.spawnCharacterSprite(charId));
+        this.characterEntities.push(this.spawnCharacter(charId));
       }
     }
   }
@@ -103,7 +119,13 @@ export class LocationScene extends Phaser.Scene {
         : def.category === "food"
           ? COLORS.itemFood
           : COLORS.itemToy;
-    const rect = this.add.rectangle(placed.position.x, placed.position.y, def.size.x, def.size.y, color);
+    const rect = this.add.rectangle(
+      placed.position.x,
+      placed.position.y,
+      def.size.x,
+      def.size.y,
+      color,
+    );
     rect.setStrokeStyle(2, 0x000000, 0.25);
     const label = this.add
       .text(placed.position.x, placed.position.y, def.name, {
@@ -120,27 +142,23 @@ export class LocationScene extends Phaser.Scene {
     return rect;
   }
 
-  private spawnCharacterSprite(charId: string): Phaser.GameObjects.Rectangle {
+  private spawnCharacter(charId: string): Character {
     const c = GameState.snapshot.characters[charId]!;
     const def = getCharacterDef(c.defId);
     const isActive = charId === GameState.snapshot.activeCharacterId;
-    const rect = this.add.rectangle(c.position.x, c.position.y, 70, 110, def.color);
-    rect.setStrokeStyle(isActive ? 4 : 2, isActive ? 0xffffff : 0x000000, isActive ? 1 : 0.3);
-    const label = this.add
-      .text(c.position.x, c.position.y - 70, def.name, {
-        fontSize: "14px",
-        color: "#ffffff",
-        backgroundColor: "#1b1f3b88",
-        padding: { left: 6, right: 6, top: 2, bottom: 2 },
-      })
-      .setOrigin(0.5);
-    rect.setData("label", label);
-    makeDraggable(rect, {
+
+    const entity = new Character(this, c.position.x, c.position.y, def.name);
+    entity.applyOutfit(c.outfit);
+    entity.showActiveMarker(isActive);
+
+    makeDraggable(entity, {
       kind: "character",
       source: "room",
       payloadId: charId,
     });
-    return rect;
+    makeDropZone(entity, { kind: "character", characterId: charId });
+
+    return entity;
   }
 
   // --- drag handlers ---
@@ -159,9 +177,21 @@ export class LocationScene extends Phaser.Scene {
         go.x = dragX;
         go.y = dragY;
         const label = go.getData?.("label") as Phaser.GameObjects.Text | undefined;
-        if (label) {
-          if (go.height > 100) label.setPosition(dragX, dragY - 70);
-          else label.setPosition(dragX, dragY);
+        if (label) label.setPosition(dragX, dragY);
+      },
+    );
+
+    // Dropped onto a registered drop zone (e.g. character).
+    this.input.on(
+      Phaser.Input.Events.DROP,
+      (_p: Phaser.Input.Pointer, go: any, dropZone: Phaser.GameObjects.GameObject) => {
+        const drag = getDragData(go) as DraggableData | undefined;
+        const drop = getDropData(dropZone as any) as DropZoneData | undefined;
+        if (!drag || !drop) return;
+
+        if (drag.kind === "item" && drop.kind === "character") {
+          this.transferItemToCharacter(drag, drop.characterId);
+          this.dropHandled.add(go);
         }
       },
     );
@@ -169,15 +199,20 @@ export class LocationScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.DRAG_END, (_p: Phaser.Input.Pointer, go: any) => {
       const data = getDragData(go) as DraggableData | undefined;
       if (!data) return;
+
+      // Drop event already moved the item into a character inventory.
+      if (this.dropHandled.has(go)) {
+        this.dropHandled.delete(go);
+        return;
+      }
+
       const insideRoom = this.isInsideRoomView(go.x, go.y);
 
       if (data.kind === "item") {
         if (insideRoom) {
           this.commitItemPosition(data.payloadId, go.x, go.y, data.source);
         } else {
-          // Außerhalb des Raumes (z. B. übers Inventar): zurück zum Owner.
           if (data.source === "room") {
-            // Schicke ins Welt-Inventar (UI rendert es).
             const removed = GameState.removeItemFromRoom(
               this.location.id,
               this.currentRoomId,
@@ -190,11 +225,7 @@ export class LocationScene extends Phaser.Scene {
               });
             }
           } else {
-            // Snap-back visuell — State unverändert.
-            go.x = data.origin.x;
-            go.y = data.origin.y;
-            const label = go.getData?.("label") as Phaser.GameObjects.Text | undefined;
-            if (label) label.setPosition(data.origin.x, data.origin.y);
+            this.snapBack(go, data);
           }
         }
       } else if (data.kind === "character") {
@@ -205,13 +236,17 @@ export class LocationScene extends Phaser.Scene {
           });
           refreshOrigin(go);
         } else {
-          go.x = data.origin.x;
-          go.y = data.origin.y;
-          const label = go.getData?.("label") as Phaser.GameObjects.Text | undefined;
-          if (label) label.setPosition(data.origin.x, data.origin.y - 70);
+          this.snapBack(go, data);
         }
       }
     });
+  }
+
+  private snapBack(go: any, data: DraggableData): void {
+    go.x = data.origin.x;
+    go.y = data.origin.y;
+    const label = go.getData?.("label") as Phaser.GameObjects.Text | undefined;
+    if (label) label.setPosition(data.origin.x, data.origin.y);
   }
 
   private isInsideRoomView(x: number, y: number): boolean {
@@ -232,7 +267,32 @@ export class LocationScene extends Phaser.Scene {
     }
   }
 
-  // --- inventory bridge from UIScene ---
+  // --- pickups & placements ---
+
+  private transferItemToCharacter(drag: DraggableData, charId: string): void {
+    if (drag.source === "room") {
+      const removed = GameState.removeItemFromRoom(
+        this.location.id,
+        this.currentRoomId,
+        drag.payloadId,
+      );
+      if (!removed) return;
+      GameState.addToCharacterInventory(charId, {
+        instanceId: removed.instanceId,
+        defId: removed.defId,
+      });
+    } else if (drag.source === "world-inventory") {
+      const removed = GameState.removeFromWorldInventory(drag.payloadId);
+      if (!removed) return;
+      GameState.addToCharacterInventory(charId, removed);
+    } else if (drag.source === "character-inventory") {
+      // Cross-character transfer (Slice: also supported).
+      const fromId = GameState.snapshot.activeCharacterId;
+      const removed = GameState.removeFromCharacterInventory(fromId, drag.payloadId);
+      if (!removed) return;
+      GameState.addToCharacterInventory(charId, removed);
+    }
+  }
 
   private placeFromWorld(instanceId: string): void {
     const removed = GameState.removeFromWorldInventory(instanceId);

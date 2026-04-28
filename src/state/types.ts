@@ -22,11 +22,19 @@ export interface PlacedItem extends ItemInstance {
   position: Vec2;
 }
 
+export interface OutfitState {
+  skinTone: string;
+  hair: string;
+  top: string;
+  bottom: string;
+  shoes: string;
+}
+
 export interface CharacterDefinition {
   id: string;
   name: string;
-  /** Placeholder color for Phase 1. */
-  color: number;
+  /** Default outfit when this character first enters the world. */
+  defaultOutfit: OutfitState;
 }
 
 export interface CharacterState {
@@ -39,8 +47,8 @@ export interface CharacterState {
   };
   /** Items the character is carrying; reisen mit. */
   inventory: ItemInstance[];
-  /** Outfit layers (Phase 2 fills this; Phase 1 leaves empty). */
-  outfit: Record<string, string | undefined>;
+  /** Outfit layers — typed in Phase 2. */
+  outfit: OutfitState;
 }
 
 export interface RoomState {

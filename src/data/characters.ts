@@ -1,21 +1,38 @@
 import type { CharacterDefinition } from "../state/types";
-import { COLORS } from "../config";
 
 export const CHARACTERS: Record<string, CharacterDefinition> = {
   nina: {
     id: "nina",
     name: "Nina",
-    color: COLORS.character[0]!,
+    defaultOutfit: {
+      skinTone: "warm",
+      hair: "long",
+      top: "redshirt",
+      bottom: "jeans",
+      shoes: "sneakers",
+    },
   },
   noca: {
     id: "noca",
     name: "Noca",
-    color: COLORS.character[1]!,
+    defaultOutfit: {
+      skinTone: "light",
+      hair: "spiky",
+      top: "blueshirt",
+      bottom: "shorts",
+      shoes: "boots",
+    },
   },
   pip: {
     id: "pip",
     name: "Pip",
-    color: COLORS.character[2]!,
+    defaultOutfit: {
+      skinTone: "tan",
+      hair: "curly",
+      top: "yellowshirt",
+      bottom: "skirt",
+      shoes: "sandals",
+    },
   },
 };
 

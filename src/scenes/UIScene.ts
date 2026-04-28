@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH, COLORS } from "../config";
 import { GameState } from "../state/GameState";
 import { getItemDef } from "../data/items";
 import { CHARACTERS, getCharacterDef } from "../data/characters";
+import { OutfitCatalog } from "../data/outfits";
 import type { ItemInstance } from "../state/types";
 
 const PANEL_HEIGHT = 180;
@@ -61,6 +62,7 @@ export class UIScene extends Phaser.Scene {
     this.buildCharSelector();
 
     this.makeResetButton();
+    this.makeEditorButton();
 
     this.hint = this.add
       .text(GAME_WIDTH / 2, PANEL_TOP - 22, "", {
@@ -84,7 +86,7 @@ export class UIScene extends Phaser.Scene {
 
     const def = getCharacterDef(active.defId);
     this.hint.setText(
-      `Aktiv: ${def.name}  ·  klicke ein Item um es im Raum abzulegen, ziehe Items im Raum zum Bewegen`,
+      `Aktiv: ${def.name}  ·  Item-Klick = im Raum ablegen · Item auf Charakter ziehen = mitnehmen · Editor oben links`,
     );
   }
 
@@ -158,9 +160,13 @@ export class UIScene extends Phaser.Scene {
     for (let i = ids.length - 1; i >= 0; i--) {
       const id = ids[i]!;
       const def = getCharacterDef(id);
+      const charState = GameState.snapshot.characters[id];
+      const topColor = charState
+        ? OutfitCatalog.top(charState.outfit.top).color
+        : 0xcccccc;
       const isActive = id === GameState.snapshot.activeCharacterId;
       xOffset -= 50;
-      const dot = this.add.circle(xOffset, 0, 22, def.color, 1);
+      const dot = this.add.circle(xOffset, 0, 22, topColor, 1);
       dot.setStrokeStyle(isActive ? 4 : 2, isActive ? 0xffffff : 0x000000, isActive ? 1 : 0.4);
       dot.setInteractive({ useHandCursor: true });
       dot.on("pointerdown", () => GameState.setActiveCharacter(id));
@@ -175,6 +181,26 @@ export class UIScene extends Phaser.Scene {
     });
     heading.setOrigin(1, 0);
     this.charSelector.add(heading);
+  }
+
+  private makeEditorButton(): void {
+    const x = 140;
+    const y = 20;
+    const bg = this.add
+      .rectangle(x, y, 130, 32, COLORS.accent, 0.95)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, COLORS.text);
+    const text = this.add
+      .text(x + 65, y + 16, "Charakter-Editor", { fontSize: "12px", color: "#1b1f3b" })
+      .setOrigin(0.5);
+    bg.setInteractive({ useHandCursor: true });
+    bg.on("pointerdown", () => {
+      const loc = this.scene.get("Location") as Phaser.Scene;
+      loc.events.emit("ui:open-editor");
+    });
+    bg.on("pointerover", () => bg.setFillStyle(0xffd99a, 1));
+    bg.on("pointerout", () => bg.setFillStyle(COLORS.accent, 0.95));
+    void text;
   }
 
   private makeResetButton(): void {
