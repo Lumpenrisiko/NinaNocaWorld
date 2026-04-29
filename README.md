@@ -4,7 +4,7 @@ Browser-Sandbox-Spiel im Stil von *Toca Life World* – privat, eigenständiger 
 
 ## Status
 
-**Phase 2 – Charakter-System.** Aufbauend auf der Engine-Schicht aus Phase 1: Composite-Charaktere mit fünf Layern (Hautton, Haar, Oberteil, Unterteil, Schuhe), Charakter-Editor mit Karussells, Item-Pickup durch Drop-auf-Charakter. Alle Layer sind weiterhin Platzhalter-Rechtecke; Phase 3 ersetzt sie durch echte Sprites.
+**Phase 3 – Asset-Pipeline & Cartoon-Look.** Alle Sprites werden zur Laufzeit aus Phaser-Graphics-Primitiven gezeichnet und in der `PreloadScene` zu Texturen gebacken — Charaktere mit Gesicht, Möbel/Spielzeug mit Form-Details, jedes Zimmer mit Wand-/Boden-/Fenster-Look. Keine externen Asset-Dateien. Phase 4 füllt mehr Räume und Interaktionen, Phase 5 macht es veröffentlichungsfähig.
 
 ## Setup
 
@@ -34,19 +34,23 @@ npm run typecheck
 
 - `src/state/GameState.ts` – Singleton, Source of Truth über Scenes hinweg.
 - `src/systems/SaveSystem.ts` – versionierte JSON-Persistenz mit Migrations-Hook.
-- `src/systems/LocationLoader.ts` – On-Demand-Asset-Hook, in Phase 1 Stub.
-- `src/systems/DragDrop.ts` – einheitliche Drag-Markierung für Items und Charaktere.
+- `src/systems/LocationLoader.ts` – On-Demand-Asset-Hook (Stub bis externe Assets dazukommen).
+- `src/systems/DragDrop.ts` – einheitliche Drag-Markierung + Drop-Zone-Helper.
 - `src/scenes/BootScene.ts` – initialisiert GameState aus Save oder Default.
-- `src/scenes/PreloadScene.ts` – Progress-Bar (in Phase 1 Dummy-Tween).
+- `src/scenes/PreloadScene.ts` – bakt alle Texturen über Phaser Graphics, mit Progress-Bar.
 - `src/scenes/LocationScene.ts` – generisch, rendert eine Location aus Daten.
 - `src/scenes/UIScene.ts` – persistente Overlay-UI (Inventare, Charakter-Wahl, Editor-Button).
-- `src/scenes/CharacterEditorScene.ts` – modaler Avatar-Editor, läuft als pausierende Overlay-Scene.
-- `src/entities/Character.ts` – Composite-Container mit fünf Layern; `applyOutfit()` ist der einzige Mutator.
-- `src/data/outfits.ts` – Katalog der Outfit-Optionen pro Layer.
-- `src/data/locations/` – Location-Definitionen (rein Daten, kein Code pro Location).
+- `src/scenes/CharacterEditorScene.ts` – modaler Avatar-Editor, pausierende Overlay-Scene.
+- `src/entities/Character.ts` – Composite-Container mit fünf Image-Layern; `applyOutfit()` tauscht Texturen.
+- `src/graphics/drawCharacter.ts` – Zeichenfunktionen + Texture-Baking pro Layer-Option.
+- `src/graphics/drawItems.ts` – Zeichenfunktionen + Texture-Baking pro Item.
+- `src/graphics/drawRoom.ts` – Zeichenfunktionen + Texture-Baking pro Raum.
+- `src/graphics/textureFactory.ts` – `bakeTexture(scene, key, w, h, draw)` Helper.
+- `src/data/outfits.ts` – Outfit-Katalog inkl. Style-Felder + Texture-Key-Konvention.
+- `src/data/locations/` – Location-Definitionen (Daten, kein Code pro Location).
 - `src/data/items.ts`, `src/data/characters.ts` – Kataloge.
 
-Phase 3 ersetzt die Layer-Rechtecke durch echte Sprites/Atlanten, ohne `Character`/`OutfitCatalog`-Schnittstelle zu ändern.
+Phase 4 füllt weitere Räume mit Detail und ergänzt 5+ Interaktionen (essen, schlafen, Lampen, etc.). Wenn später echte Sprite-Assets reinkommen, ändert sich nur der Inhalt von `src/graphics/draw*.ts` — Aufrufer nutzen weiter `TextureKeys.*`.
 
 ## Roadmap
 

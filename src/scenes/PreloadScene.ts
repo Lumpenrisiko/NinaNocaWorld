@@ -1,11 +1,14 @@
 import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH, COLORS } from "../config";
 import { GameState } from "../state/GameState";
+import { bakeCharacterTextures } from "../graphics/drawCharacter";
+import { bakeItemTextures } from "../graphics/drawItems";
+import { bakeRoomTextures } from "../graphics/drawRoom";
 
 /**
- * In Phase 1 gibt es keine echten Assets zu laden — wir simulieren einen
- * Progress-Pass für ~400 ms, damit der spätere LocationLoader denselben
- * Hookpoint nutzen kann.
+ * Bakes all "core" textures (characters, items, rooms) procedurally via
+ * Phaser Graphics. Phase 3 has no remote assets to load — the time spent
+ * is the synchronous baking, not network I/O.
  */
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -24,7 +27,7 @@ export class PreloadScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.add
+    const status = this.add
       .text(cx, cy - 18, "lädt …", {
         fontSize: "18px",
         color: "#9aa0c0",
@@ -41,13 +44,42 @@ export class PreloadScene extends Phaser.Scene {
 
     const fill = this.add.rectangle(barX, barY, 0, barHeight, COLORS.accent).setOrigin(0, 0);
 
-    this.tweens.add({
-      targets: fill,
-      width: barWidth,
-      duration: 400,
-      ease: "Sine.easeOut",
-      onComplete: () => this.startGame(),
-    });
+    // Synchronous baking is fast (<200 ms total in dev). We still update
+    // the bar in steps so the player sees something move.
+    const steps: Array<{ label: string; run: () => void }> = [
+      { label: "Charaktere zeichnen …", run: () => bakeCharacterTextures(this) },
+      { label: "Möbel zeichnen …", run: () => bakeItemTextures(this) },
+      { label: "Räume zeichnen …", run: () => bakeRoomTextures(this) },
+    ];
+
+    let i = 0;
+    const tick = () => {
+      if (i >= steps.length) {
+        status.setText("Fertig.");
+        this.tweens.add({
+          targets: fill,
+          width: barWidth,
+          duration: 120,
+          ease: "Sine.easeOut",
+          onComplete: () => this.startGame(),
+        });
+        return;
+      }
+      const step = steps[i]!;
+      status.setText(step.label);
+      this.tweens.add({
+        targets: fill,
+        width: ((i + 1) / (steps.length + 1)) * barWidth,
+        duration: 80,
+        ease: "Linear",
+        onComplete: () => {
+          step.run();
+          i++;
+          this.time.delayedCall(20, tick);
+        },
+      });
+    };
+    tick();
   }
 
   private startGame(): void {

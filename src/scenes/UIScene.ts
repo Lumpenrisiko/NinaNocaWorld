@@ -3,7 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH, COLORS } from "../config";
 import { GameState } from "../state/GameState";
 import { getItemDef } from "../data/items";
 import { CHARACTERS, getCharacterDef } from "../data/characters";
-import { OutfitCatalog } from "../data/outfits";
+import { OutfitCatalog, TextureKeys } from "../data/outfits";
 import type { ItemInstance } from "../state/types";
 
 const PANEL_HEIGHT = 180;
@@ -101,23 +101,18 @@ export class UIScene extends Phaser.Scene {
       const def = getItemDef(item.defId);
       const x = i * (SLOT_W + SLOT_GAP);
       const y = 0;
-      const color =
-        def.category === "furniture"
-          ? COLORS.itemFurniture
-          : def.category === "food"
-            ? COLORS.itemFood
-            : COLORS.itemToy;
 
       const slotBg = this.add
         .rectangle(x, y, SLOT_W, SLOT_H, COLORS.panelLight, 1)
         .setOrigin(0, 0)
         .setStrokeStyle(1, COLORS.textDim);
 
-      const previewW = Math.min(def.size.x * 0.4, SLOT_W - 18);
-      const previewH = Math.min(def.size.y * 0.4, SLOT_H - 28);
       const preview = this.add
-        .rectangle(x + SLOT_W / 2, y + SLOT_H / 2 - 6, previewW, previewH, color)
-        .setStrokeStyle(2, 0x000000, 0.25);
+        .image(x + SLOT_W / 2, y + SLOT_H / 2 - 6, TextureKeys.item(item.defId))
+        .setOrigin(0.5);
+      // Fit largest dimension into ~SLOT-22 px so previews share visual scale.
+      const fit = (SLOT_W - 22) / Math.max(def.size.x, def.size.y);
+      preview.setScale(Math.min(1, fit));
 
       const label = this.add
         .text(x + SLOT_W / 2, y + SLOT_H - 12, def.name, {
@@ -136,7 +131,6 @@ export class UIScene extends Phaser.Scene {
         }
       });
 
-      // Hover-Tint
       slotBg.on("pointerover", () => slotBg.setFillStyle(COLORS.dropZoneHover, 1));
       slotBg.on("pointerout", () => slotBg.setFillStyle(COLORS.panelLight, 1));
 

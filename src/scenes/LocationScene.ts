@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH, COLORS } from "../config";
 import { GameState } from "../state/GameState";
 import { getLocation } from "../data/locations";
-import { getItemDef } from "../data/items";
 import { LocationLoader } from "../systems/LocationLoader";
 import {
   makeDraggable,
@@ -16,6 +15,7 @@ import type { LocationDefinition } from "../data/locations/types";
 import type { PlacedItem } from "../state/types";
 import { Character } from "../entities/Character";
 import { getCharacterDef } from "../data/characters";
+import { TextureKeys } from "../data/outfits";
 
 interface InitData {
   locationId: string;
@@ -33,7 +33,8 @@ export class LocationScene extends Phaser.Scene {
   private location!: LocationDefinition;
   private currentRoomId!: string;
 
-  private bg!: Phaser.GameObjects.Rectangle;
+  private bg!: Phaser.GameObjects.Image;
+  private bgFallback!: Phaser.GameObjects.Rectangle;
   private label!: Phaser.GameObjects.Text;
 
   private itemSprites: Phaser.GameObjects.GameObject[] = [];
@@ -53,8 +54,14 @@ export class LocationScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.bg = this.add
+    // Solid fallback so the room area never shows the page background even
+    // for an instant if a texture is missing.
+    this.bgFallback = this.add
       .rectangle(ROOM_VIEW.x, ROOM_VIEW.y, ROOM_VIEW.w, ROOM_VIEW.h, COLORS.room[0])
+      .setOrigin(0, 0);
+
+    this.bg = this.add
+      .image(ROOM_VIEW.x, ROOM_VIEW.y, TextureKeys.room(this.location.id, this.currentRoomId))
       .setOrigin(0, 0);
 
     this.label = this.add.text(ROOM_VIEW.x + 20, ROOM_VIEW.y + 16, "", {
@@ -90,7 +97,9 @@ export class LocationScene extends Phaser.Scene {
     const room = this.location.rooms.find((r) => r.id === this.currentRoomId);
     if (!room) return;
 
-    this.bg.fillColor = room.bgColor;
+    this.bgFallback.fillColor = room.bgColor;
+    const key = TextureKeys.room(this.location.id, this.currentRoomId);
+    if (this.textures.exists(key)) this.bg.setTexture(key);
     this.label.setText(`${this.location.name} · ${room.name}`);
 
     this.itemSprites.forEach((s) => s.destroy());
@@ -111,35 +120,15 @@ export class LocationScene extends Phaser.Scene {
     }
   }
 
-  private spawnItemSprite(placed: PlacedItem): Phaser.GameObjects.Rectangle {
-    const def = getItemDef(placed.defId);
-    const color =
-      def.category === "furniture"
-        ? COLORS.itemFurniture
-        : def.category === "food"
-          ? COLORS.itemFood
-          : COLORS.itemToy;
-    const rect = this.add.rectangle(
-      placed.position.x,
-      placed.position.y,
-      def.size.x,
-      def.size.y,
-      color,
-    );
-    rect.setStrokeStyle(2, 0x000000, 0.25);
-    const label = this.add
-      .text(placed.position.x, placed.position.y, def.name, {
-        fontSize: "14px",
-        color: "#1b1f3b",
-      })
-      .setOrigin(0.5);
-    rect.setData("label", label);
-    makeDraggable(rect, {
+  private spawnItemSprite(placed: PlacedItem): Phaser.GameObjects.Image {
+    const key = TextureKeys.item(placed.defId);
+    const img = this.add.image(placed.position.x, placed.position.y, key);
+    makeDraggable(img, {
       kind: "item",
       source: "room",
       payloadId: placed.instanceId,
     });
-    return rect;
+    return img;
   }
 
   private spawnCharacter(charId: string): Character {
