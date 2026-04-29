@@ -4,7 +4,7 @@ Browser-Sandbox-Spiel im Stil von *Toca Life World* – privat, eigenständiger 
 
 ## Status
 
-**Phase 3 – Asset-Pipeline & Cartoon-Look.** Alle Sprites werden zur Laufzeit aus Phaser-Graphics-Primitiven gezeichnet und in der `PreloadScene` zu Texturen gebacken — Charaktere mit Gesicht, Möbel/Spielzeug mit Form-Details, jedes Zimmer mit Wand-/Boden-/Fenster-Look. Keine externen Asset-Dateien. Phase 4 füllt mehr Räume und Interaktionen, Phase 5 macht es veröffentlichungsfähig.
+**Phase 4 – Interaktionen.** Tap auf ein Item im Raum öffnet ein Aktions-Menü; das aktive Kind führt die gewählte Aktion aus, mit Sprechblase + kurzer Animation. Sechs Interaktionen verdrahtet (Apfel/Brot essen, Sofa hinsetzen, Bett schlafen, Ball spielen, Teddy knuddeln). Konsumierbare Items verschwinden mit Shrink-Tween. Phase 5 schließt UX-Polish, Sound und Veröffentlichung ab.
 
 ## Setup
 
@@ -24,6 +24,7 @@ npm run typecheck
 - Items im Raum frei verschiebbar (Drag).
 - Items aus dem Raum nach unten ziehen → zurück ins Welt-Inventar.
 - **Item auf einen Charakter ziehen → wandert ins Inventar dieses Charakters und reist mit, wenn er den Raum wechselt.**
+- **Tap auf ein Item im Raum** öffnet ein kontextuelles Aktions-Menü für das aktive Kind: essen (verschwindet), hinsetzen, schlafen, spielen, knuddeln — mit Sprechblase über dem Charakter und passender Mini-Animation (Hüpfen, Drehen, Wackeln, Schräglage).
 - **Charakter-Editor (Button oben links):** Karussells für jede Layer-Kategorie, Live-Preview, Übernehmen/Abbrechen.
 - Charakter-Auswahl oben rechts (Punkt = Top-Farbe des Charakters).
 - Raum-Wechsel über `<` `>` unten am Spielfeldrand.
@@ -36,12 +37,15 @@ npm run typecheck
 - `src/systems/SaveSystem.ts` – versionierte JSON-Persistenz mit Migrations-Hook.
 - `src/systems/LocationLoader.ts` – On-Demand-Asset-Hook (Stub bis externe Assets dazukommen).
 - `src/systems/DragDrop.ts` – einheitliche Drag-Markierung + Drop-Zone-Helper.
+- `src/systems/ActionSystem.ts` – `executeAction(ctx, action)`: Sprechblase, Charakter-Tween, Item-Konsum.
+- `src/data/actions.ts` – `ITEM_ACTIONS` (per Item: erlaubte Aktionen + Emoji + Label) und `ACTION_BEHAVIOR` (per Aktion: Animation + Konsum).
+- `src/entities/SpeechBubble.ts` – einmalige Pop-up-Bubble mit Pop-in/Hold/Float-up-Tween.
 - `src/scenes/BootScene.ts` – initialisiert GameState aus Save oder Default.
 - `src/scenes/PreloadScene.ts` – bakt alle Texturen über Phaser Graphics, mit Progress-Bar.
 - `src/scenes/LocationScene.ts` – generisch, rendert eine Location aus Daten.
 - `src/scenes/UIScene.ts` – persistente Overlay-UI (Inventare, Charakter-Wahl, Editor-Button).
 - `src/scenes/CharacterEditorScene.ts` – modaler Avatar-Editor, pausierende Overlay-Scene.
-- `src/entities/Character.ts` – Composite-Container mit fünf Image-Layern; `applyOutfit()` tauscht Texturen.
+- `src/entities/Character.ts` – Composite-Container mit fünf Image-Layern; `applyOutfit()` tauscht Texturen, `playReaction(anim, ms)` spielt Tween.
 - `src/graphics/drawCharacter.ts` – Zeichenfunktionen + Texture-Baking pro Layer-Option.
 - `src/graphics/drawItems.ts` – Zeichenfunktionen + Texture-Baking pro Item.
 - `src/graphics/drawRoom.ts` – Zeichenfunktionen + Texture-Baking pro Raum.
@@ -50,7 +54,7 @@ npm run typecheck
 - `src/data/locations/` – Location-Definitionen (Daten, kein Code pro Location).
 - `src/data/items.ts`, `src/data/characters.ts` – Kataloge.
 
-Phase 4 füllt weitere Räume mit Detail und ergänzt 5+ Interaktionen (essen, schlafen, Lampen, etc.). Wenn später echte Sprite-Assets reinkommen, ändert sich nur der Inhalt von `src/graphics/draw*.ts` — Aufrufer nutzen weiter `TextureKeys.*`.
+Phase 5 schließt Polish-Themen ab (Sound, Touch-Feinschliff, optionale weitere Locations / MapScene). Wenn später echte Sprite-Assets reinkommen, ändert sich nur der Inhalt von `src/graphics/draw*.ts` — Aufrufer nutzen weiter `TextureKeys.*`. Eine neue Aktion = ein Eintrag in `ACTION_BEHAVIOR` plus Zuordnung in `ITEM_ACTIONS`.
 
 ## Roadmap
 

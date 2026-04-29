@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { OutfitState } from "../state/types";
+import type { ReactionAnim } from "../data/actions";
 import { CHARACTER_CANVAS, TextureKeys } from "../data/outfits";
 
 /**
@@ -68,5 +69,75 @@ export class Character extends Phaser.GameObjects.Container {
   setDisplayName(name: string): this {
     this.nameTag.setText(name);
     return this;
+  }
+
+  /** Position above the head — anchor for speech bubbles. */
+  get headTop(): { x: number; y: number } {
+    return { x: this.x, y: this.y - Character.SIZE.h / 2 - 6 };
+  }
+
+  /**
+   * Plays a brief reaction animation. Tweens are scoped so they always
+   * return the character to its rest pose; calling this while another
+   * reaction is running is safe (newer tween supersedes the previous one).
+   */
+  playReaction(anim: ReactionAnim, durationMs: number): void {
+    const tweens = this.scene.tweens;
+    tweens.killTweensOf(this);
+    // Reset rest pose before next animation.
+    this.rotation = 0;
+
+    switch (anim) {
+      case "bounce":
+        tweens.add({
+          targets: this,
+          y: this.y - 16,
+          duration: durationMs / 2,
+          yoyo: true,
+          ease: "Sine.easeOut",
+        });
+        break;
+      case "bob":
+        tweens.add({
+          targets: this,
+          y: this.y + 6,
+          duration: durationMs / 2,
+          yoyo: true,
+          ease: "Sine.easeInOut",
+        });
+        break;
+      case "rest":
+        tweens.add({
+          targets: this,
+          rotation: -0.45,
+          duration: durationMs / 4,
+          yoyo: true,
+          hold: durationMs / 2,
+          ease: "Sine.easeInOut",
+        });
+        break;
+      case "spin":
+        tweens.add({
+          targets: this,
+          rotation: this.rotation + Math.PI * 2,
+          duration: durationMs,
+          ease: "Cubic.easeInOut",
+          onComplete: () => {
+            // Normalize so repeated spins don't accumulate.
+            this.rotation = 0;
+          },
+        });
+        break;
+      case "wiggle":
+        tweens.add({
+          targets: this,
+          rotation: 0.18,
+          duration: durationMs / 8,
+          yoyo: true,
+          repeat: 3,
+          ease: "Sine.easeInOut",
+        });
+        break;
+    }
   }
 }

@@ -86,7 +86,7 @@ export class UIScene extends Phaser.Scene {
 
     const def = getCharacterDef(active.defId);
     this.hint.setText(
-      `Aktiv: ${def.name}  ·  Item-Klick = im Raum ablegen · Item auf Charakter ziehen = mitnehmen · Editor oben links`,
+      `Aktiv: ${def.name}  ·  Inventar-Klick = ablegen · Drag → Charakter = mitnehmen · Tap auf Item im Raum = Aktion`,
     );
   }
 

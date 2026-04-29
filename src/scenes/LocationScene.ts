@@ -16,6 +16,9 @@ import type { PlacedItem } from "../state/types";
 import { Character } from "../entities/Character";
 import { getCharacterDef } from "../data/characters";
 import { TextureKeys } from "../data/outfits";
+import { getItemActions, type ItemActionConfig } from "../data/actions";
+import { getItemDef } from "../data/items";
+import { executeAction } from "../systems/ActionSystem";
 
 interface InitData {
   locationId: string;
@@ -38,10 +41,13 @@ export class LocationScene extends Phaser.Scene {
   private label!: Phaser.GameObjects.Text;
 
   private itemSprites: Phaser.GameObjects.GameObject[] = [];
-  private characterEntities: Character[] = [];
+  private characterEntities = new Map<string, Character>();
 
   /** Set true by drop event so dragend skips position commit. */
   private dropHandled = new WeakSet<object>();
+
+  private actionMenu: Phaser.GameObjects.Container | null = null;
+  private actionBackdrop: Phaser.GameObjects.Rectangle | null = null;
 
   constructor() {
     super("Location");
@@ -102,10 +108,12 @@ export class LocationScene extends Phaser.Scene {
     if (this.textures.exists(key)) this.bg.setTexture(key);
     this.label.setText(`${this.location.name} · ${room.name}`);
 
+    this.closeActionMenu();
+
     this.itemSprites.forEach((s) => s.destroy());
     this.itemSprites = [];
     this.characterEntities.forEach((s) => s.destroy());
-    this.characterEntities = [];
+    this.characterEntities.clear();
 
     const roomState = GameState.getRoom(this.location.id, this.currentRoomId);
     for (const placed of roomState.items) {
@@ -115,7 +123,7 @@ export class LocationScene extends Phaser.Scene {
     for (const charId of Object.keys(GameState.snapshot.characters)) {
       const c = GameState.snapshot.characters[charId]!;
       if (c.position.locationId === this.location.id && c.position.roomId === this.currentRoomId) {
-        this.characterEntities.push(this.spawnCharacter(charId));
+        this.characterEntities.set(charId, this.spawnCharacter(charId));
       }
     }
   }
@@ -128,6 +136,20 @@ export class LocationScene extends Phaser.Scene {
       source: "room",
       payloadId: placed.instanceId,
     });
+
+    // Click vs drag: pointerup with no preceding dragstart = tap.
+    let wasDragged = false;
+    img.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      wasDragged = false;
+    });
+    img.on(Phaser.Input.Events.DRAG_START, () => {
+      wasDragged = true;
+    });
+    img.on(Phaser.Input.Events.POINTER_UP, () => {
+      if (wasDragged) return;
+      this.handleItemTap(img, placed);
+    });
+
     return img;
   }
 
@@ -330,5 +352,117 @@ export class LocationScene extends Phaser.Scene {
     this.currentRoomId = this.location.rooms[nextIdx]!.id;
     GameState.setActiveRoom(this.currentRoomId);
     this.renderRoom();
+  }
+
+  // --- action menu ---
+
+  private handleItemTap(itemSprite: Phaser.GameObjects.Image, placed: PlacedItem): void {
+    const actions = getItemActions(placed.defId);
+    if (actions.length === 0) return;
+
+    const active = GameState.activeCharacter;
+    if (
+      active.position.locationId !== this.location.id ||
+      active.position.roomId !== this.currentRoomId
+    ) {
+      return;
+    }
+
+    const charEntity = this.characterEntities.get(GameState.snapshot.activeCharacterId);
+    if (!charEntity) return;
+
+    this.openActionMenu(itemSprite, placed, charEntity, actions);
+  }
+
+  private openActionMenu(
+    itemSprite: Phaser.GameObjects.Image,
+    placed: PlacedItem,
+    char: Character,
+    actions: ItemActionConfig[],
+  ): void {
+    this.closeActionMenu();
+
+    const PAD = 14;
+    const BUTTON_H = 36;
+    const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: "16px",
+      color: "#1b1f3b",
+      fontStyle: "bold",
+    };
+
+    // Pre-measure button widths so we can lay them out side by side.
+    const widths: number[] = actions.map((a) => {
+      const probe = this.add.text(0, 0, `${a.emoji}  ${a.label}`, labelStyle);
+      const w = Math.max(120, Math.ceil(probe.width) + PAD * 2);
+      probe.destroy();
+      return w;
+    });
+    const totalW = widths.reduce((s, w) => s + w + 8, -8);
+
+    const itemDef = getItemDef(placed.defId);
+    let menuY = itemSprite.y - itemDef.size.y / 2 - BUTTON_H / 2 - 16;
+    if (menuY < ROOM_VIEW.y + BUTTON_H / 2 + 8) {
+      menuY = itemSprite.y + itemDef.size.y / 2 + BUTTON_H / 2 + 16;
+    }
+    const menuX = Phaser.Math.Clamp(
+      itemSprite.x,
+      ROOM_VIEW.x + totalW / 2 + 8,
+      ROOM_VIEW.x + ROOM_VIEW.w - totalW / 2 - 8,
+    );
+
+    // Backdrop catches outside clicks. Phaser's topOnly input means the menu
+    // buttons (higher depth) still receive their own pointer events.
+    this.actionBackdrop = this.add
+      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.001)
+      .setOrigin(0, 0)
+      .setDepth(1500)
+      .setInteractive();
+    this.actionBackdrop.on(Phaser.Input.Events.POINTER_DOWN, () => this.closeActionMenu());
+
+    const menu = this.add.container(menuX, menuY).setDepth(1501);
+
+    let cursorX = -totalW / 2;
+    for (let i = 0; i < actions.length; i++) {
+      const a = actions[i]!;
+      const bw = widths[i]!;
+      const cx = cursorX + bw / 2;
+
+      const bg = this.add
+        .rectangle(cx, 0, bw, BUTTON_H, 0xffffff, 0.97)
+        .setStrokeStyle(2, 0x1b1f3b, 0.95);
+      const txt = this.add
+        .text(cx, 0, `${a.emoji}  ${a.label}`, labelStyle)
+        .setOrigin(0.5);
+
+      bg.setInteractive({ useHandCursor: true });
+      bg.on(Phaser.Input.Events.POINTER_OVER, () => bg.setFillStyle(COLORS.accent, 1));
+      bg.on(Phaser.Input.Events.POINTER_OUT, () => bg.setFillStyle(0xffffff, 0.97));
+      bg.on(Phaser.Input.Events.POINTER_UP, () => {
+        this.closeActionMenu();
+        executeAction(
+          {
+            scene: this,
+            character: char,
+            itemSprite,
+            item: placed,
+            locationId: this.location.id,
+            roomId: this.currentRoomId,
+          },
+          a,
+        );
+      });
+
+      menu.add([bg, txt]);
+      cursorX += bw + 8;
+    }
+
+    this.actionMenu = menu;
+  }
+
+  private closeActionMenu(): void {
+    this.actionMenu?.destroy();
+    this.actionMenu = null;
+    this.actionBackdrop?.destroy();
+    this.actionBackdrop = null;
   }
 }
