@@ -11,6 +11,7 @@ import {
 } from "../data/outfits";
 import type { OutfitState } from "../state/types";
 import { Character } from "../entities/Character";
+import { Sound } from "../systems/Sound";
 
 interface Carousel<T extends { id: string; label: string }> {
   options: T[];
@@ -177,6 +178,7 @@ export class CharacterEditorScene extends Phaser.Scene {
     c.index = (c.index + dir + c.options.length) % c.options.length;
     const opt = c.options[c.index]!;
     c.valueText.setText(opt.label);
+    Sound.click();
     onChange(opt);
   }
 
@@ -208,12 +210,13 @@ export class CharacterEditorScene extends Phaser.Scene {
   }
 
   private confirm(): void {
+    Sound.pickup();
     GameState.setCharacterOutfit(this.charId, this.working);
     this.close();
   }
 
   private cancel(): void {
-    // Restore preview to original (state was never mutated).
+    Sound.click();
     this.working = { ...this.original };
     this.close();
   }

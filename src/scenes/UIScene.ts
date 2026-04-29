@@ -4,6 +4,7 @@ import { GameState } from "../state/GameState";
 import { getItemDef } from "../data/items";
 import { CHARACTERS, getCharacterDef } from "../data/characters";
 import { OutfitCatalog, TextureKeys } from "../data/outfits";
+import { Sound } from "../systems/Sound";
 import type { ItemInstance } from "../state/types";
 
 const PANEL_HEIGHT = 180;
@@ -63,6 +64,7 @@ export class UIScene extends Phaser.Scene {
 
     this.makeResetButton();
     this.makeEditorButton();
+    this.makeMuteButton();
 
     this.hint = this.add
       .text(GAME_WIDTH / 2, PANEL_TOP - 22, "", {
@@ -123,6 +125,7 @@ export class UIScene extends Phaser.Scene {
 
       slotBg.setInteractive({ useHandCursor: true });
       slotBg.on("pointerdown", () => {
+        Sound.click();
         const loc = this.scene.get("Location") as Phaser.Scene;
         if (pool === "world") {
           loc.events.emit("ui:request-place-from-world", item.instanceId);
@@ -163,7 +166,10 @@ export class UIScene extends Phaser.Scene {
       const dot = this.add.circle(xOffset, 0, 22, topColor, 1);
       dot.setStrokeStyle(isActive ? 4 : 2, isActive ? 0xffffff : 0x000000, isActive ? 1 : 0.4);
       dot.setInteractive({ useHandCursor: true });
-      dot.on("pointerdown", () => GameState.setActiveCharacter(id));
+      dot.on("pointerdown", () => {
+        if (id !== GameState.snapshot.activeCharacterId) Sound.click();
+        GameState.setActiveCharacter(id);
+      });
       const label = this.add
         .text(xOffset, 28, def.name, { fontSize: "12px", color: "#f2f2f7" })
         .setOrigin(0.5);
@@ -189,12 +195,33 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5);
     bg.setInteractive({ useHandCursor: true });
     bg.on("pointerdown", () => {
+      Sound.click();
       const loc = this.scene.get("Location") as Phaser.Scene;
       loc.events.emit("ui:open-editor");
     });
     bg.on("pointerover", () => bg.setFillStyle(0xffd99a, 1));
     bg.on("pointerout", () => bg.setFillStyle(COLORS.accent, 0.95));
     void text;
+  }
+
+  private makeMuteButton(): void {
+    const x = GAME_WIDTH - 30;
+    const y = 70;
+    const btn = this.add
+      .text(x, y, Sound.isMuted() ? "🔇" : "🔊", { fontSize: "26px" })
+      .setOrigin(0.5);
+    btn.setInteractive({ useHandCursor: true });
+    btn.on("pointerdown", () => {
+      const next = !Sound.isMuted();
+      Sound.setMuted(next);
+      btn.setText(next ? "🔇" : "🔊");
+      if (!next) Sound.click();
+      try {
+        window.localStorage.setItem("ninanocaworld:muted", next ? "1" : "0");
+      } catch {
+        /* storage unavailable */
+      }
+    });
   }
 
   private makeResetButton(): void {

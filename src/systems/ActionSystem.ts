@@ -1,9 +1,18 @@
 import Phaser from "phaser";
 import { GameState } from "../state/GameState";
-import { ACTION_BEHAVIOR, type ItemActionConfig } from "../data/actions";
+import { ACTION_BEHAVIOR, type ActionId, type ItemActionConfig } from "../data/actions";
 import { SpeechBubble } from "../entities/SpeechBubble";
+import { Sound } from "./Sound";
 import type { Character } from "../entities/Character";
 import type { PlacedItem } from "../state/types";
+
+const ACTION_SOUNDS: Record<ActionId, () => void> = {
+  eat: () => Sound.munch(),
+  sit: () => Sound.bounce(),
+  sleep: () => Sound.zzz(),
+  play: () => Sound.boing(),
+  hug: () => Sound.awww(),
+};
 
 export interface ActionContext {
   scene: Phaser.Scene;
@@ -24,6 +33,8 @@ export interface ActionContext {
  */
 export function executeAction(ctx: ActionContext, action: ItemActionConfig): void {
   const behavior = ACTION_BEHAVIOR[action.id];
+
+  ACTION_SOUNDS[action.id]?.();
 
   const head = ctx.character.headTop;
   new SpeechBubble(ctx.scene, head.x, head.y, action.emoji);

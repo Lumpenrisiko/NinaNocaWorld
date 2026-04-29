@@ -19,6 +19,8 @@ import { TextureKeys } from "../data/outfits";
 import { getItemActions, type ItemActionConfig } from "../data/actions";
 import { getItemDef } from "../data/items";
 import { executeAction } from "../systems/ActionSystem";
+import { Sound } from "../systems/Sound";
+import { SpeechBubble } from "../entities/SpeechBubble";
 
 interface InitData {
   locationId: string;
@@ -222,6 +224,7 @@ export class LocationScene extends Phaser.Scene {
       if (data.kind === "item") {
         if (insideRoom) {
           this.commitItemPosition(data.payloadId, go.x, go.y, data.source);
+          if (data.source !== "room") Sound.drop();
         } else {
           if (data.source === "room") {
             const removed = GameState.removeItemFromRoom(
@@ -234,6 +237,7 @@ export class LocationScene extends Phaser.Scene {
                 instanceId: removed.instanceId,
                 defId: removed.defId,
               });
+              Sound.drop();
             }
           } else {
             this.snapBack(go, data);
@@ -292,16 +296,18 @@ export class LocationScene extends Phaser.Scene {
         instanceId: removed.instanceId,
         defId: removed.defId,
       });
+      Sound.pickup();
     } else if (drag.source === "world-inventory") {
       const removed = GameState.removeFromWorldInventory(drag.payloadId);
       if (!removed) return;
       GameState.addToCharacterInventory(charId, removed);
+      Sound.pickup();
     } else if (drag.source === "character-inventory") {
-      // Cross-character transfer (Slice: also supported).
       const fromId = GameState.snapshot.activeCharacterId;
       const removed = GameState.removeFromCharacterInventory(fromId, drag.payloadId);
       if (!removed) return;
       GameState.addToCharacterInventory(charId, removed);
+      Sound.pickup();
     }
   }
 
@@ -311,6 +317,7 @@ export class LocationScene extends Phaser.Scene {
     GameState.placeItemInRoom(this.location.id, this.currentRoomId, removed, {
       ...this.location.defaultDropPosition,
     });
+    Sound.drop();
   }
 
   private placeFromCharacter(instanceId: string): void {
@@ -320,6 +327,7 @@ export class LocationScene extends Phaser.Scene {
     GameState.placeItemInRoom(this.location.id, this.currentRoomId, removed, {
       ...this.location.defaultDropPosition,
     });
+    Sound.drop();
   }
 
   // --- room nav ---
@@ -351,6 +359,7 @@ export class LocationScene extends Phaser.Scene {
     const nextIdx = (idx + dir + this.location.rooms.length) % this.location.rooms.length;
     this.currentRoomId = this.location.rooms[nextIdx]!.id;
     GameState.setActiveRoom(this.currentRoomId);
+    Sound.whoosh();
     this.renderRoom();
   }
 
@@ -365,12 +374,22 @@ export class LocationScene extends Phaser.Scene {
       active.position.locationId !== this.location.id ||
       active.position.roomId !== this.currentRoomId
     ) {
+      // Active child is in another room — give visual + audio feedback.
+      Sound.bonk();
+      const itemDef = getItemDef(placed.defId);
+      new SpeechBubble(
+        this,
+        itemSprite.x,
+        itemSprite.y - itemDef.size.y / 2 - 4,
+        "🤔",
+      );
       return;
     }
 
     const charEntity = this.characterEntities.get(GameState.snapshot.activeCharacterId);
     if (!charEntity) return;
 
+    Sound.click();
     this.openActionMenu(itemSprite, placed, charEntity, actions);
   }
 

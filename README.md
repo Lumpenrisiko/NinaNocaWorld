@@ -4,7 +4,7 @@ Browser-Sandbox-Spiel im Stil von *Toca Life World* – privat, eigenständiger 
 
 ## Status
 
-**Phase 4 – Interaktionen.** Tap auf ein Item im Raum öffnet ein Aktions-Menü; das aktive Kind führt die gewählte Aktion aus, mit Sprechblase + kurzer Animation. Sechs Interaktionen verdrahtet (Apfel/Brot essen, Sofa hinsetzen, Bett schlafen, Ball spielen, Teddy knuddeln). Konsumierbare Items verschwinden mit Shrink-Tween. Phase 5 schließt UX-Polish, Sound und Veröffentlichung ab.
+**Phase 5 – Polish & Release.** Spiel ist veröffentlichungsreif: prozedurales Web-Audio-Soundsystem (Klicks, Drops, per-Aktion-SFX, Whoosh, „Bonk" wenn keine Aktion möglich), Mute-Toggle in der Top-Right-Ecke, persistiert in localStorage. UX-Feedback wenn das aktive Kind nicht im Raum ist (🤔-Bubble + Bonk-Sound statt stummer Nicht-Reaktion). Page-Polish: SVG-Favicon inline, Loading-Screen vor Phaser-Boot, Meta-Tags für Mobile. Vite-Build splittet Phaser in eigenen Chunk → App-Code ist nur ~44 KB.
 
 ## Setup
 
@@ -24,7 +24,9 @@ npm run typecheck
 - Items im Raum frei verschiebbar (Drag).
 - Items aus dem Raum nach unten ziehen → zurück ins Welt-Inventar.
 - **Item auf einen Charakter ziehen → wandert ins Inventar dieses Charakters und reist mit, wenn er den Raum wechselt.**
-- **Tap auf ein Item im Raum** öffnet ein kontextuelles Aktions-Menü für das aktive Kind: essen (verschwindet), hinsetzen, schlafen, spielen, knuddeln — mit Sprechblase über dem Charakter und passender Mini-Animation (Hüpfen, Drehen, Wackeln, Schräglage).
+- **Tap auf ein Item im Raum** öffnet ein kontextuelles Aktions-Menü für das aktive Kind: essen (verschwindet), hinsetzen, schlafen, spielen, knuddeln — mit Sprechblase, Mini-Animation (Hüpfen, Drehen, Wackeln, Schräglage) und passendem prozeduralen Sound.
+- **Sound-Feedback** für jede Aktion, Item-Pickup/-Drop, Raumwechsel und Buttons. Mute-Toggle 🔊/🔇 oben rechts (persistiert).
+- **Hinweis-Feedback** wenn man ein Item antippt und das aktive Kind in einem anderen Raum ist (🤔-Bubble + leiser Bonk).
 - **Charakter-Editor (Button oben links):** Karussells für jede Layer-Kategorie, Live-Preview, Übernehmen/Abbrechen.
 - Charakter-Auswahl oben rechts (Punkt = Top-Farbe des Charakters).
 - Raum-Wechsel über `<` `>` unten am Spielfeldrand.
@@ -37,7 +39,8 @@ npm run typecheck
 - `src/systems/SaveSystem.ts` – versionierte JSON-Persistenz mit Migrations-Hook.
 - `src/systems/LocationLoader.ts` – On-Demand-Asset-Hook (Stub bis externe Assets dazukommen).
 - `src/systems/DragDrop.ts` – einheitliche Drag-Markierung + Drop-Zone-Helper.
-- `src/systems/ActionSystem.ts` – `executeAction(ctx, action)`: Sprechblase, Charakter-Tween, Item-Konsum.
+- `src/systems/ActionSystem.ts` – `executeAction(ctx, action)`: Sound, Sprechblase, Charakter-Tween, Item-Konsum.
+- `src/systems/Sound.ts` – prozedurale Web-Audio-SFX (Oszillator + Hüllkurve, kein externes Sample). Mute-Toggle.
 - `src/data/actions.ts` – `ITEM_ACTIONS` (per Item: erlaubte Aktionen + Emoji + Label) und `ACTION_BEHAVIOR` (per Aktion: Animation + Konsum).
 - `src/entities/SpeechBubble.ts` – einmalige Pop-up-Bubble mit Pop-in/Hold/Float-up-Tween.
 - `src/scenes/BootScene.ts` – initialisiert GameState aus Save oder Default.
@@ -54,7 +57,11 @@ npm run typecheck
 - `src/data/locations/` – Location-Definitionen (Daten, kein Code pro Location).
 - `src/data/items.ts`, `src/data/characters.ts` – Kataloge.
 
-Phase 5 schließt Polish-Themen ab (Sound, Touch-Feinschliff, optionale weitere Locations / MapScene). Wenn später echte Sprite-Assets reinkommen, ändert sich nur der Inhalt von `src/graphics/draw*.ts` — Aufrufer nutzen weiter `TextureKeys.*`. Eine neue Aktion = ein Eintrag in `ACTION_BEHAVIOR` plus Zuordnung in `ITEM_ACTIONS`.
+Wenn später echte Sprite-Assets reinkommen, ändert sich nur der Inhalt von `src/graphics/draw*.ts` — Aufrufer nutzen weiter `TextureKeys.*`. Eine neue Aktion = ein Eintrag in `ACTION_BEHAVIOR` plus Zuordnung in `ITEM_ACTIONS`. Eine neue Location = ein Eintrag in `src/data/locations/`, eine Draw-Funktion in `drawRoom.ts` und Default-Items im SaveSystem.
+
+## Build / Deploy
+
+`npm run build` erzeugt `dist/` mit `index.html`, einem App-Chunk (~44 KB gz) und einem Phaser-Chunk (~340 KB gz, separat cacheable). Inhalt von `dist/` lässt sich auf jedem statischen Hoster (GitHub Pages, Netlify, Vercel, S3+CloudFront) ausliefern – `vite.config.ts` setzt `base: "./"`, das Bundle ist relativ-pfad-tauglich.
 
 ## Roadmap
 

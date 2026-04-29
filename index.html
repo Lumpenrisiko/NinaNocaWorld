@@ -2,9 +2,13 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#1b1f3b" />
-    <title>NinaNocaWorld</title>
+    <meta name="description" content="NinaNocaWorld – ein kleiner Browser-Sandbox-Spielplatz für Kinder. Charaktere anziehen, Räume einrichten, gemeinsam spielen." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231b1f3b'/><circle cx='32' cy='30' r='18' fill='%23f6c177'/><circle cx='26' cy='28' r='2.5' fill='%231b1f3b'/><circle cx='38' cy='28' r='2.5' fill='%231b1f3b'/><path d='M24 36 Q32 42 40 36' fill='none' stroke='%231b1f3b' stroke-width='2.5' stroke-linecap='round'/></svg>" />
+    <title>NinaNocaWorld – Sandbox-Spielplatz</title>
     <style>
       html, body {
         margin: 0;
@@ -15,6 +19,7 @@
         width: 100%;
         font-family: system-ui, -apple-system, sans-serif;
         color: #fff;
+        overscroll-behavior: none;
       }
       #game {
         width: 100vw;
@@ -27,10 +32,52 @@
         display: block;
         touch-action: none;
       }
+      #loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        background: #0d0f24;
+        z-index: 9999;
+        transition: opacity 220ms ease-out;
+      }
+      #loader.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .loader-title {
+        font-size: 38px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        color: #f6c177;
+      }
+      .loader-subtitle {
+        font-size: 14px;
+        color: #9aa0c0;
+      }
+      .loader-spinner {
+        width: 44px;
+        height: 44px;
+        border: 4px solid #1b1f3b;
+        border-top-color: #f6c177;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="loader">
+      <div class="loader-title">NinaNocaWorld</div>
+      <div class="loader-spinner"></div>
+      <div class="loader-subtitle">lädt …</div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
