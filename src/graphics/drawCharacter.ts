@@ -20,32 +20,30 @@ import { OUTLINE, shade, mix } from "./colorUtils";
 
 /**
  * Anatomy reference (relative to texture center cx, cy):
- *   head:        center (cx, cy-45),   60w × 60h ellipse
- *   torso:       center (cx, cy-5),    50w × 40h rounded rect
- *   left arm:    center (cx-32, cy-5), 14w × 40h rounded rect
- *   right arm:   center (cx+32, cy-5), 14w × 40h rounded rect
- *   hip/thigh:   trapezoid cx ± 25 -> cx ± 22, y cy+15 .. cy+50
- *   l. shin:     center (cx-11, cy+55), 16w × 25h rounded rect
- *   r. shin:     center (cx+11, cy+55), 16w × 25h rounded rect
- *   l. shoe:     center (cx-13, cy+72), 24w × 12h shoe
- *   r. shoe:     center (cx+13, cy+72), 24w × 12h shoe
+ *   ground shadow: ellipse below the feet, drawn at the start of the skin
+ *                  layer so all layers stack visually above it.
+ *   head:        center (cx, cy-52),   70w × 68h ellipse  (≈40% of body)
+ *   torso:       center (cx, cy-8),    46w × 30h rounded rect
+ *   arms:        center (cx ± 28, cy-8), 16w × 30h
+ *   hip:         trapezoid cx ± 23 → cx ± 20, y cy+7 .. cy+38
+ *   shins:       center (cx ± 12, cy+47), 18w × 22h
+ *   shoes:       center (cx ± 14, cy+64), 30w × 14h
  *
- * All layer textures share CHARACTER_CANVAS dimensions, so they stack
- * pixel-perfectly when placed at the same Container origin.
+ * All layer textures share CHARACTER_CANVAS so they stack pixel-perfectly.
  */
 
 const W = CHARACTER_CANVAS.w;
 const H = CHARACTER_CANVAS.h;
 
-const HEAD = { dx: 0, dy: -45, w: 60, h: 60 };
-const TORSO = { dx: 0, dy: -5, w: 50, h: 40, r: 12 };
-const ARM = { offsetX: 30, dy: -5, w: 14, h: 40, r: 7 };
-const HIP_TOP_HALFW = 26;
-const HIP_BOTTOM_HALFW = 22;
-const HIP_TOP_Y = 15;
-const HIP_BOTTOM_Y = 50;
-const SHIN = { offsetX: 11, dy: 56, w: 16, h: 26, r: 6 };
-const SHOE = { offsetX: 13, dy: 73, w: 26, h: 14, r: 5 };
+const HEAD = { dx: 0, dy: -52, w: 70, h: 68 };
+const TORSO = { dx: 0, dy: -8, w: 46, h: 30, r: 12 };
+const ARM = { offsetX: 28, dy: -8, w: 16, h: 30, r: 8 };
+const HIP_TOP_HALFW = 23;
+const HIP_BOTTOM_HALFW = 20;
+const HIP_TOP_Y = 7;
+const HIP_BOTTOM_Y = 38;
+const SHIN = { offsetX: 12, dy: 47, w: 18, h: 22, r: 7 };
+const SHOE = { offsetX: 14, dy: 64, w: 30, h: 14, r: 6 };
 
 // ---------- skin / base ----------
 
@@ -56,24 +54,36 @@ export function drawSkinBase(
   skin: SkinToneOption,
 ): void {
   const skinColor = skin.color;
+  const skinDark = shade(skinColor, 0.86);
   const outlineCol = OUTLINE;
+
+  // 1. Ground shadow — drawn first so every layer above it gets its depth hint.
+  g.fillStyle(0x000000, 0.22);
+  g.fillEllipse(cx, cy + 80, 60, 12);
 
   g.lineStyle(2, outlineCol, 0.9);
 
-  // Arms
+  // 2. Arms
   g.fillStyle(skinColor, 1);
   drawRoundedRectCentered(g, cx - ARM.offsetX, cy + ARM.dy, ARM.w, ARM.h, ARM.r, true);
   drawRoundedRectCentered(g, cx + ARM.offsetX, cy + ARM.dy, ARM.w, ARM.h, ARM.r, true);
 
-  // Hands at end of arms
-  g.fillCircle(cx - ARM.offsetX, cy + ARM.dy + ARM.h / 2, 8);
-  g.fillCircle(cx + ARM.offsetX, cy + ARM.dy + ARM.h / 2, 8);
-  g.lineStyle(2, outlineCol, 0.9);
-  g.strokeCircle(cx - ARM.offsetX, cy + ARM.dy + ARM.h / 2, 8);
-  g.strokeCircle(cx + ARM.offsetX, cy + ARM.dy + ARM.h / 2, 8);
+  // Hands at end of arms (slightly larger now to match thicker arms).
+  for (const sign of [-1, 1]) {
+    const hx = cx + sign * ARM.offsetX;
+    const hy = cy + ARM.dy + ARM.h / 2;
+    g.fillStyle(skinColor, 1);
+    g.fillCircle(hx, hy, 9);
+    g.lineStyle(2, outlineCol, 0.9);
+    g.strokeCircle(hx, hy, 9);
+    // Subtle ambient shadow at the bottom of each hand.
+    g.fillStyle(skinDark, 0.45);
+    g.fillEllipse(hx, hy + 3, 12, 4);
+  }
 
-  // Hip / upper-legs trapezoid
+  // 3. Hip / upper-legs trapezoid
   g.fillStyle(skinColor, 1);
+  g.lineStyle(2, outlineCol, 0.9);
   g.beginPath();
   g.moveTo(cx - HIP_TOP_HALFW, cy + HIP_TOP_Y);
   g.lineTo(cx + HIP_TOP_HALFW, cy + HIP_TOP_Y);
@@ -83,44 +93,76 @@ export function drawSkinBase(
   g.fillPath();
   g.strokePath();
 
-  // Shins
+  // 4. Shins
   drawRoundedRectCentered(g, cx - SHIN.offsetX, cy + SHIN.dy, SHIN.w, SHIN.h, SHIN.r, true);
   drawRoundedRectCentered(g, cx + SHIN.offsetX, cy + SHIN.dy, SHIN.w, SHIN.h, SHIN.r, true);
 
-  // Torso (skin color is mostly hidden under top, but shows at neck)
+  // 5. Torso (mostly hidden under top, shows at neck).
   drawRoundedRectCentered(g, cx + TORSO.dx, cy + TORSO.dy, TORSO.w, TORSO.h, TORSO.r, true);
 
-  // Head
+  // 6. Head
   g.fillStyle(skinColor, 1);
   g.lineStyle(2, outlineCol, 0.9);
   g.fillEllipse(cx + HEAD.dx, cy + HEAD.dy, HEAD.w, HEAD.h);
   g.strokeEllipse(cx + HEAD.dx, cy + HEAD.dy, HEAD.w, HEAD.h);
 
-  // Cheeks
-  const blush = mix(skinColor, 0xff8e9c, 0.55);
-  g.fillStyle(blush, 0.85);
-  g.fillCircle(cx + HEAD.dx - 14, cy + HEAD.dy + 6, 4);
-  g.fillCircle(cx + HEAD.dx + 14, cy + HEAD.dy + 6, 4);
+  // 6a. Top-of-head highlight — fakes a soft directional light from above.
+  g.fillStyle(0xffffff, 0.22);
+  g.fillEllipse(cx + HEAD.dx - 8, cy + HEAD.dy - 22, 26, 12);
 
-  // Eyes
-  const eyeY = cy + HEAD.dy - 2;
-  g.fillStyle(0xffffff, 1);
-  g.fillEllipse(cx + HEAD.dx - 8, eyeY, 9, 11);
-  g.fillEllipse(cx + HEAD.dx + 8, eyeY, 9, 11);
-  g.lineStyle(1.5, outlineCol, 0.9);
-  g.strokeEllipse(cx + HEAD.dx - 8, eyeY, 9, 11);
-  g.strokeEllipse(cx + HEAD.dx + 8, eyeY, 9, 11);
-  g.fillStyle(0x1b1f3b, 1);
-  g.fillCircle(cx + HEAD.dx - 8, eyeY + 1, 3);
-  g.fillCircle(cx + HEAD.dx + 8, eyeY + 1, 3);
-  g.fillStyle(0xffffff, 1);
-  g.fillCircle(cx + HEAD.dx - 9, eyeY, 1);
-  g.fillCircle(cx + HEAD.dx + 7, eyeY, 1);
+  // 6b. Chin ambient shadow — adds dimension along the lower jaw curve.
+  g.fillStyle(skinDark, 0.4);
+  g.fillEllipse(cx + HEAD.dx, cy + HEAD.dy + 22, 36, 8);
 
-  // Smile: clockwise arc through the bottom of the mouth circle.
-  g.lineStyle(2, outlineCol, 0.95);
+  // 7. Cheeks (bigger, more saturated for a Toca-Boca-ish look).
+  const blush = mix(skinColor, 0xff6f87, 0.7);
+  g.fillStyle(blush, 0.9);
+  g.fillCircle(cx + HEAD.dx - 18, cy + HEAD.dy + 8, 6);
+  g.fillCircle(cx + HEAD.dx + 18, cy + HEAD.dy + 8, 6);
+  // Small inner core that's slightly more pink, for soft gradient feel.
+  g.fillStyle(mix(skinColor, 0xff8ea0, 0.85), 0.6);
+  g.fillCircle(cx + HEAD.dx - 18, cy + HEAD.dy + 8, 3);
+  g.fillCircle(cx + HEAD.dx + 18, cy + HEAD.dy + 8, 3);
+
+  // 8. Eyes (bigger, rounder, with shine).
+  const eyeY = cy + HEAD.dy - 4;
+  const eyeOffsetX = 11;
+  const eyeW = 13;
+  const eyeH = 16;
+  for (const sign of [-1, 1]) {
+    const ex = cx + HEAD.dx + sign * eyeOffsetX;
+    g.fillStyle(0xffffff, 1);
+    g.fillEllipse(ex, eyeY, eyeW, eyeH);
+    g.lineStyle(1.6, outlineCol, 0.95);
+    g.strokeEllipse(ex, eyeY, eyeW, eyeH);
+    // Pupil
+    g.fillStyle(0x1b1f3b, 1);
+    g.fillCircle(ex, eyeY + 1, 4);
+    // Big shine, top-left of pupil
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(ex - 1.5, eyeY - 1.5, 1.8);
+    // Tiny secondary shine
+    g.fillStyle(0xffffff, 0.7);
+    g.fillCircle(ex + 1.8, eyeY + 2.5, 0.8);
+  }
+
+  // 9. Eyebrows — short curved arcs above each eye. Single biggest expression boost.
+  g.lineStyle(2.5, outlineCol, 0.95);
+  for (const sign of [-1, 1]) {
+    const ex = cx + HEAD.dx + sign * eyeOffsetX;
+    g.beginPath();
+    g.arc(ex, eyeY - 11, 6, 1.18 * Math.PI, 1.82 * Math.PI, false);
+    g.strokePath();
+  }
+
+  // 10. Tiny nose hint — single soft line/dot.
+  g.fillStyle(skinDark, 0.7);
+  g.fillEllipse(cx + HEAD.dx, cy + HEAD.dy + 4, 4, 3);
+
+  // 11. Smile (slightly bigger, ends with little upticks via two short strokes).
+  g.lineStyle(2.4, outlineCol, 0.95);
   g.beginPath();
-  g.arc(cx + HEAD.dx, cy + HEAD.dy + 11, 7, 0.15 * Math.PI, 0.85 * Math.PI, false);
+  g.arc(cx + HEAD.dx, cy + HEAD.dy + 14, 8, 0.12 * Math.PI, 0.88 * Math.PI, false);
   g.strokePath();
 }
 
@@ -137,13 +179,12 @@ export function drawHair(
   const headHalfW = HEAD.w / 2;
   const col = hair.color;
   const dark = shade(col, 0.7);
+  const highlight = shade(col, 1.25);
   g.lineStyle(2, OUTLINE, 0.85);
 
   switch (hair.style) {
     case "short": {
-      // Cap that follows top half of the head with a fringe.
-      // arc(π → 0) clockwise (anticlockwise=false) traverses through 3π/2
-      // which in canvas-coordinates (y-down) is the top of the circle.
+      // Cap that follows top half of the head with a parted fringe.
       g.fillStyle(col, 1);
       g.beginPath();
       g.moveTo(cx - headHalfW + 2, cy + HEAD.dy + 2);
@@ -157,6 +198,9 @@ export function drawHair(
       g.closePath();
       g.fillPath();
       g.strokePath();
+      // Highlight streak on the crown
+      g.fillStyle(highlight, 0.45);
+      g.fillEllipse(cx - 8, headTop + 8, 24, 6);
       break;
     }
     case "long": {
@@ -172,7 +216,7 @@ export function drawHair(
       g.closePath();
       g.fillPath();
       g.strokePath();
-      // Fringe
+      // Fringe overlay
       g.fillStyle(dark, 1);
       g.beginPath();
       g.moveTo(cx - 18, cy + HEAD.dy - 12);
@@ -181,23 +225,32 @@ export function drawHair(
       g.lineTo(cx - 22, cy + HEAD.dy - 4);
       g.closePath();
       g.fillPath();
+      // Strand highlights
+      g.lineStyle(1.5, highlight, 0.55);
+      g.lineBetween(cx - headHalfW - 2, headBottom + 2, cx - headHalfW + 6, headBottom + 18);
+      g.lineBetween(cx + headHalfW + 2, headBottom + 2, cx + headHalfW - 6, headBottom + 18);
       break;
     }
     case "curly": {
       // Cluster of circles around the upper head.
       g.fillStyle(col, 1);
-      const r = 13;
+      const r = 14;
       const ring: [number, number][] = [
-        [-22, -6], [-10, -16], [4, -18], [18, -14], [26, -2],
-        [22, 10], [-2, -22], [10, -22], [-22, 6], [22, -16],
+        [-24, -4], [-10, -16], [4, -20], [18, -16], [28, -2],
+        [24, 12], [-2, -22], [12, -22], [-24, 8], [22, -18],
       ];
       for (const [dx, dy] of ring) {
-        g.fillCircle(cx + dx, headTop + 14 + dy, r);
+        g.fillCircle(cx + dx, headTop + 16 + dy, r);
+      }
+      // Inner highlight on each curl
+      g.fillStyle(highlight, 0.45);
+      for (const [dx, dy] of ring) {
+        g.fillCircle(cx + dx - 3, headTop + 16 + dy - 3, 4);
       }
       // Outline pass
       g.lineStyle(2, OUTLINE, 0.7);
       for (const [dx, dy] of ring) {
-        g.strokeCircle(cx + dx, headTop + 14 + dy, r);
+        g.strokeCircle(cx + dx, headTop + 16 + dy, r);
       }
       break;
     }
@@ -209,8 +262,8 @@ export function drawHair(
       g.moveTo(cx - headHalfW, baseY);
       for (let i = 0; i <= spikes; i++) {
         const t = i / spikes;
-        const x = cx - headHalfW + t * (HEAD.w);
-        const tipY = baseY - 16 - (i % 2 === 0 ? 6 : 0);
+        const x = cx - headHalfW + t * HEAD.w;
+        const tipY = baseY - 18 - (i % 2 === 0 ? 6 : 0);
         const x2 = x + HEAD.w / spikes / 2;
         g.lineTo(x2, tipY);
         g.lineTo(x + HEAD.w / spikes, baseY);
@@ -218,6 +271,14 @@ export function drawHair(
       g.closePath();
       g.fillPath();
       g.strokePath();
+      // Spike-tip highlights
+      g.fillStyle(highlight, 0.6);
+      for (let i = 0; i <= spikes; i++) {
+        const t = i / spikes;
+        const x = cx - headHalfW + t * HEAD.w + HEAD.w / spikes / 2;
+        const tipY = baseY - 16 - (i % 2 === 0 ? 6 : 0);
+        g.fillCircle(x, tipY + 2, 1.6);
+      }
       break;
     }
     case "ponytail": {
@@ -241,6 +302,13 @@ export function drawHair(
       g.closePath();
       g.fillPath();
       g.strokePath();
+      // Tail highlight + tie band
+      g.fillStyle(highlight, 0.5);
+      g.fillEllipse(cx + headHalfW + 6, cy + HEAD.dy + 2, 4, 8);
+      g.fillStyle(0xffffff, 0.85);
+      g.fillCircle(cx + headHalfW - 2, cy + HEAD.dy - 4, 3);
+      g.lineStyle(1.5, OUTLINE, 0.85);
+      g.strokeCircle(cx + headHalfW - 2, cy + HEAD.dy - 4, 3);
       break;
     }
   }
@@ -256,6 +324,7 @@ export function drawTop(
 ): void {
   const col = top.color;
   const dark = shade(col, 0.75);
+  const light = shade(col, 1.18);
 
   // Shirt body
   g.fillStyle(col, 1);
@@ -271,12 +340,20 @@ export function drawTop(
   );
 
   // Sleeves (cover upper third of arms)
-  drawRoundedRectCentered(g, cx - ARM.offsetX, cy + ARM.dy - 8, ARM.w + 8, 18, 8, true);
-  drawRoundedRectCentered(g, cx + ARM.offsetX, cy + ARM.dy - 8, ARM.w + 8, 18, 8, true);
+  drawRoundedRectCentered(g, cx - ARM.offsetX, cy + ARM.dy - 6, ARM.w + 8, 18, 8, true);
+  drawRoundedRectCentered(g, cx + ARM.offsetX, cy + ARM.dy - 6, ARM.w + 8, 18, 8, true);
 
-  // Neckline (hint of skin tone behind)
+  // Top highlight band — soft sheen along the shoulder line.
+  g.fillStyle(light, 0.45);
+  g.fillEllipse(cx + TORSO.dx, cy + TORSO.dy - TORSO.h / 2 + 4, TORSO.w - 4, 6);
+
+  // Bottom shadow — small darker band where shirt meets pants.
+  g.fillStyle(dark, 0.5);
+  g.fillRect(cx - (TORSO.w + 6) / 2 + 4, cy + TORSO.dy + TORSO.h / 2, TORSO.w - 2, 3);
+
+  // Neckline (slightly darker patch hinting at collar shadow).
   g.fillStyle(dark, 1);
-  g.fillEllipse(cx + TORSO.dx, cy + TORSO.dy - TORSO.h / 2 + 2, 18, 8);
+  g.fillEllipse(cx + TORSO.dx, cy + TORSO.dy - TORSO.h / 2 + 1, 18, 7);
 }
 
 // ---------- bottom ----------
@@ -288,7 +365,8 @@ export function drawBottom(
   bottom: BottomOption,
 ): void {
   const col = bottom.color;
-  const dark = shade(col, 0.8);
+  const dark = shade(col, 0.78);
+  const light = shade(col, 1.15);
 
   g.fillStyle(col, 1);
   g.lineStyle(2, OUTLINE, 0.9);
@@ -297,11 +375,17 @@ export function drawBottom(
     g.beginPath();
     g.moveTo(cx - HIP_TOP_HALFW - 2, cy + HIP_TOP_Y - 2);
     g.lineTo(cx + HIP_TOP_HALFW + 2, cy + HIP_TOP_Y - 2);
-    g.lineTo(cx + HIP_BOTTOM_HALFW + 16, cy + HIP_BOTTOM_Y + 8);
-    g.lineTo(cx - HIP_BOTTOM_HALFW - 16, cy + HIP_BOTTOM_Y + 8);
+    g.lineTo(cx + HIP_BOTTOM_HALFW + 18, cy + HIP_BOTTOM_Y + 10);
+    g.lineTo(cx - HIP_BOTTOM_HALFW - 18, cy + HIP_BOTTOM_Y + 10);
     g.closePath();
     g.fillPath();
     g.strokePath();
+    // Skirt highlight stripe down the front
+    g.fillStyle(light, 0.4);
+    g.fillRect(cx - 6, cy + HIP_TOP_Y, 4, HIP_BOTTOM_Y - HIP_TOP_Y + 8);
+    // Belt line
+    g.fillStyle(dark, 0.85);
+    g.fillRect(cx - HIP_TOP_HALFW - 1, cy + HIP_TOP_Y - 3, HIP_TOP_HALFW * 2 + 2, 3);
     return;
   }
 
@@ -336,6 +420,10 @@ export function drawBottom(
     true,
   );
 
+  // Center seam (jeans-style stitching) – subtle vertical line down the middle
+  g.fillStyle(light, 0.35);
+  g.fillRect(cx - 1, cy + HIP_TOP_Y, 1, HIP_BOTTOM_Y - HIP_TOP_Y);
+
   // Belt line
   g.fillStyle(dark, 1);
   g.fillRect(cx - HIP_TOP_HALFW - 1, cy + HIP_TOP_Y - 3, HIP_TOP_HALFW * 2 + 2, 3);
@@ -350,7 +438,8 @@ export function drawShoes(
   shoes: ShoeOption,
 ): void {
   const col = shoes.color;
-  const dark = shade(col, 0.6);
+  const dark = shade(col, 0.55);
+  const light = shade(col, 1.18);
   g.lineStyle(2, OUTLINE, 0.9);
 
   for (const sign of [-1, 1]) {
@@ -360,17 +449,20 @@ export function drawShoes(
     if (shoes.style === "sandal") {
       // Sole
       g.fillStyle(col, 1);
-      drawRoundedRectCentered(g, x, y + 3, SHOE.w, 6, 3, true);
+      drawRoundedRectCentered(g, x, y + 3, SHOE.w, 7, 3, true);
       // Straps
-      g.lineStyle(2, dark, 1);
-      g.lineBetween(x - 8, y - 2, x + 6, y - 2);
-      g.lineBetween(x - 4, y - 4, x + 8, y - 4);
+      g.lineStyle(2.2, dark, 1);
+      g.lineBetween(x - 9, y - 2, x + 7, y - 2);
+      g.lineBetween(x - 4, y - 5, x + 9, y - 5);
       g.lineStyle(2, OUTLINE, 0.9);
     } else {
       // Body
       g.fillStyle(col, 1);
       drawRoundedRectCentered(g, x, y, SHOE.w, SHOE.h, SHOE.r, true);
-      // Sole accent
+      // Top sheen
+      g.fillStyle(light, 0.5);
+      g.fillEllipse(x, y - SHOE.h / 2 + 3, SHOE.w - 8, 3);
+      // Sole accent (rubber bottom)
       g.fillStyle(dark, 1);
       g.fillRect(x - SHOE.w / 2 + 1, y + SHOE.h / 2 - 4, SHOE.w - 2, 3);
 
@@ -379,6 +471,9 @@ export function drawShoes(
         g.fillStyle(col, 1);
         g.lineStyle(2, OUTLINE, 0.9);
         drawRoundedRectCentered(g, x, y - 12, SHOE.w - 6, 14, 4, true);
+        // Shaft highlight
+        g.fillStyle(light, 0.5);
+        g.fillRect(x - 8, y - 18, 3, 12);
       }
     }
   }

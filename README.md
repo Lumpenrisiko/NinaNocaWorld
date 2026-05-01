@@ -4,7 +4,7 @@ Browser-Sandbox-Spiel im Stil von *Toca Life World* – privat, eigenständiger 
 
 ## Status
 
-**Phase 5 – Polish & Release.** Spiel ist veröffentlichungsreif: prozedurales Web-Audio-Soundsystem (Klicks, Drops, per-Aktion-SFX, Whoosh, „Bonk" wenn keine Aktion möglich), Mute-Toggle in der Top-Right-Ecke, persistiert in localStorage. UX-Feedback wenn das aktive Kind nicht im Raum ist (🤔-Bubble + Bonk-Sound statt stummer Nicht-Reaktion). Page-Polish: SVG-Favicon inline, Loading-Screen vor Phaser-Boot, Meta-Tags für Mobile. Vite-Build splittet Phaser in eigenen Chunk → App-Code ist nur ~44 KB.
+**Phase 5 + Visual-Polish.** Veröffentlichungsreif (Sound, Mute-Toggle, Loading-Screen, Bundle-Split, Favicon) und mit aufgewertetem Look: Toca-Boca-Proportionen (großer Kopf, gedrungener Körper), ausdrucksstarkere Gesichter (Augenbrauen, größere Augen, Wangen, Glanz), Boden-Schatten und Highlights an Items, abwechslungsreiche Tapeten-Muster (Streifen, Punkte, Subway, Wandpaneele) und Boden-Varianten (Holz mit Maserung, Schach, Kachel) plus Wand-Deko (Uhren, Pflanzen, Regale) pro Raum. **Optionaler SVG-Pfad**: prozedurales Drawing dient als Fallback; pro Asset kann eine Vector-SVG hinterlegt werden, die beim Boot rastert wird (`public/assets/svg/`, `src/data/assetManifest.ts`). Demo: der Apfel wird bereits aus einer SVG mit Radial-Gradient gerendert.
 
 ## Setup
 
@@ -52,7 +52,9 @@ npm run typecheck
 - `src/graphics/drawCharacter.ts` – Zeichenfunktionen + Texture-Baking pro Layer-Option.
 - `src/graphics/drawItems.ts` – Zeichenfunktionen + Texture-Baking pro Item.
 - `src/graphics/drawRoom.ts` – Zeichenfunktionen + Texture-Baking pro Raum.
-- `src/graphics/textureFactory.ts` – `bakeTexture(scene, key, w, h, draw)` Helper.
+- `src/graphics/textureFactory.ts` – `bakeTexture(scene, key, w, h, draw)` Helper. Überspringt jeden Key, der bereits als Textur existiert — daher gewinnt SVG immer gegen Procedural.
+- `src/data/assetManifest.ts` – Liste der per-SVG-überschriebenen Texturen. Helfer `assetEntry(category, id, path)` löst Texture-Key + Größe automatisch auf.
+- `public/assets/svg/` – Drop-Folder für Vector-Sprites; siehe README dort.
 - `src/data/outfits.ts` – Outfit-Katalog inkl. Style-Felder + Texture-Key-Konvention.
 - `src/data/locations/` – Location-Definitionen (Daten, kein Code pro Location).
 - `src/data/items.ts`, `src/data/characters.ts` – Kataloge.

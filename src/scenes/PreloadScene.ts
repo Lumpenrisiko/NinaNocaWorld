@@ -4,15 +4,36 @@ import { GameState } from "../state/GameState";
 import { bakeCharacterTextures } from "../graphics/drawCharacter";
 import { bakeItemTextures } from "../graphics/drawItems";
 import { bakeRoomTextures } from "../graphics/drawRoom";
+import { ASSET_MANIFEST, validateManifest } from "../data/assetManifest";
 
 /**
- * Bakes all "core" textures (characters, items, rooms) procedurally via
- * Phaser Graphics. Phase 3 has no remote assets to load — the time spent
- * is the synchronous baking, not network I/O.
+ * Two-stage texture pipeline:
+ *
+ *   1. preload(): registers any SVG overrides from ASSET_MANIFEST.
+ *      Phaser rasters them at the configured width/height during the
+ *      built-in loader phase.
+ *
+ *   2. create(): runs the procedural bake* functions. Each one early-exits
+ *      when its texture key already exists, so the SVG-loaded keys are
+ *      preserved and only the gaps get drawn.
+ *
+ * This means there's exactly one place to override art ("drop a file +
+ * add an entry to ASSET_MANIFEST"), and the procedural pipeline keeps
+ * everything covered while you migrate.
  */
 export class PreloadScene extends Phaser.Scene {
   constructor() {
     super("Preload");
+  }
+
+  preload(): void {
+    const stale = validateManifest();
+    if (stale.length > 0) {
+      console.warn("[ASSET_MANIFEST] entries reference unknown texture keys:", stale);
+    }
+    for (const entry of ASSET_MANIFEST) {
+      this.load.svg(entry.key, entry.path, { width: entry.width, height: entry.height });
+    }
   }
 
   create(): void {
