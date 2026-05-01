@@ -51,7 +51,7 @@ Falls eine SVG fehlt oder nicht lädt, fällt die Engine still auf das Procedura
 Drei Wege je nach Vorliebe / Budget:
 
 - **Selbst zeichnen** in Figma / Inkscape / Affinity Designer. Setze das Canvas auf die Größe aus der Tabelle oben.
-- **AI-Generation** (Midjourney/DALL·E/Stable Diffusion) → PNG → vektorisieren (z. B. `vectorizer.ai`, `recraft.ai` oder Inkscape "Bitmap nachzeichnen").
+- **AI-Generation** (Recraft mit nativem SVG-Output, oder DALL·E/Midjourney/SD + Vektorisierung). **Fertige Prompt-Templates** für jedes Asset stehen unter [`docs/ai-prompts.md`](../../../docs/ai-prompts.md).
 - **Fertige Asset-Packs** (itch.io, OpenGameArt, Kenney). Lizenz prüfen.
 
 Achte auf konsistenten Stil: gleiche Linienstärke, gleiche Sättigung, gleiche Schattierungsrichtung — sonst wirkt das Bild „zusammengewürfelt".

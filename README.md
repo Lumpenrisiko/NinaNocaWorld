@@ -55,6 +55,7 @@ npm run typecheck
 - `src/graphics/textureFactory.ts` – `bakeTexture(scene, key, w, h, draw)` Helper. Überspringt jeden Key, der bereits als Textur existiert — daher gewinnt SVG immer gegen Procedural.
 - `src/data/assetManifest.ts` – Liste der per-SVG-überschriebenen Texturen. Helfer `assetEntry(category, id, path)` löst Texture-Key + Größe automatisch auf.
 - `public/assets/svg/` – Drop-Folder für Vector-Sprites; siehe README dort.
+- `docs/ai-prompts.md` – copy-paste-fertige Prompt-Templates pro Asset für Recraft / DALL·E / Stable Diffusion / Midjourney, inkl. Style-Bibel, Größen-Tabellen und Post-Processing-Checkliste.
 - `src/data/outfits.ts` – Outfit-Katalog inkl. Style-Felder + Texture-Key-Konvention.
 - `src/data/locations/` – Location-Definitionen (Daten, kein Code pro Location).
 - `src/data/items.ts`, `src/data/characters.ts` – Kataloge.
