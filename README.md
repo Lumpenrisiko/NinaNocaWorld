@@ -4,7 +4,7 @@ Browser-Sandbox-Spiel im Stil von *Toca Life World* – privat, eigenständiger 
 
 ## Status
 
-**Phase 5 + Visual-Polish.** Veröffentlichungsreif (Sound, Mute-Toggle, Loading-Screen, Bundle-Split, Favicon) und mit aufgewertetem Look: Toca-Boca-Proportionen (großer Kopf, gedrungener Körper), ausdrucksstarkere Gesichter (Augenbrauen, größere Augen, Wangen, Glanz), Boden-Schatten und Highlights an Items, abwechslungsreiche Tapeten-Muster (Streifen, Punkte, Subway, Wandpaneele) und Boden-Varianten (Holz mit Maserung, Schach, Kachel) plus Wand-Deko (Uhren, Pflanzen, Regale) pro Raum. **Optionaler SVG-Pfad**: prozedurales Drawing dient als Fallback; pro Asset kann eine Vector-SVG hinterlegt werden, die beim Boot rastert wird (`public/assets/svg/`, `src/data/assetManifest.ts`). Demo: der Apfel wird bereits aus einer SVG mit Radial-Gradient gerendert.
+**Phase 5 + Visual-Polish + iPad-Tuning.** Veröffentlichungsreif (Sound, Mute-Toggle, Loading-Screen, Bundle-Split, Favicon), mit aufgewertetem Look (Toca-Boca-Proportionen, Schatten, Highlights, Wand-Deko, Tapeten- und Boden-Varianten pro Raum) und für **iPad / iPadOS** optimiert: alle Touch-Targets ≥ 44 pt, Safe-Area-Inset für Notch und Home-Indicator, `100dvh` statt `100vh` (Safari-Adressleiste), warmer Cream-Letterbox-Hintergrund passend zur UI, Hochformat-Hinweis, Apple-Touch-Icon und ein proaktiver AudioContext-Unlock auf den ersten Touch. **Optionaler SVG-Pfad**: prozedurales Drawing dient als Fallback; pro Asset kann eine Vector-SVG hinterlegt werden (`public/assets/svg/`, `src/data/assetManifest.ts`). Demo: der Apfel wird bereits aus einer SVG mit Radial-Gradient gerendert. AI-Prompts für Asset-Generation in `docs/ai-prompts.md`.
 
 ## Setup
 

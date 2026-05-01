@@ -5,7 +5,7 @@ import { PreloadScene } from "./scenes/PreloadScene";
 import { LocationScene } from "./scenes/LocationScene";
 import { UIScene } from "./scenes/UIScene";
 import { CharacterEditorScene } from "./scenes/CharacterEditorScene";
-import { Sound } from "./systems/Sound";
+import { Sound, unlockAudioOnFirstGesture } from "./systems/Sound";
 
 try {
   if (window.localStorage.getItem("ninanocaworld:muted") === "1") {
@@ -14,6 +14,8 @@ try {
 } catch {
   /* localStorage unavailable */
 }
+
+unlockAudioOnFirstGesture();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -24,9 +26,12 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    // Re-fit on iPad rotation / Safari address-bar collapse.
+    expandParent: true,
   },
   input: {
-    activePointers: 3,
+    activePointers: 4,
+    smoothFactor: 0.2,
   },
   scene: [BootScene, PreloadScene, LocationScene, UIScene, CharacterEditorScene],
 };

@@ -3,35 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#1b1f3b" />
+    <meta name="theme-color" content="#f3e3c5" />
     <meta name="description" content="NinaNocaWorld – ein kleiner Browser-Sandbox-Spielplatz für Kinder. Charaktere anziehen, Räume einrichten, gemeinsam spielen." />
+
+    <!-- iOS / iPadOS PWA hints -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NinaNoca" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Inline SVG icon, also reused as apple-touch-icon below -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231b1f3b'/><circle cx='32' cy='30' r='18' fill='%23f6c177'/><circle cx='26' cy='28' r='2.5' fill='%231b1f3b'/><circle cx='38' cy='28' r='2.5' fill='%231b1f3b'/><path d='M24 36 Q32 42 40 36' fill='none' stroke='%231b1f3b' stroke-width='2.5' stroke-linecap='round'/></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='36' fill='%231b1f3b'/><circle cx='90' cy='84' r='52' fill='%23f6c177'/><circle cx='73' cy='80' r='7' fill='%231b1f3b'/><circle cx='107' cy='80' r='7' fill='%231b1f3b'/><path d='M68 100 Q90 118 112 100' fill='none' stroke='%231b1f3b' stroke-width='7' stroke-linecap='round'/></svg>" />
+
     <title>NinaNocaWorld – Sandbox-Spielplatz</title>
     <style>
+      :root {
+        --letterbox-bg: #f3e3c5;
+        --letterbox-bg-soft: #f9eed7;
+        --letterbox-bg-shade: #ecd5af;
+        --accent: #b35a3a;
+        --text: #6b4226;
+      }
       html, body {
         margin: 0;
         padding: 0;
-        background: #0d0f24;
-        overflow: hidden;
+        /* Warm cream that matches the living-room wallpaper, so the
+           letterboxed bands on iPad's wider-than-16:9 aspect read as
+           "wall colour" instead of dead black. */
+        background: var(--letterbox-bg)
+          radial-gradient(ellipse at 50% 35%, var(--letterbox-bg-soft) 0%, var(--letterbox-bg-shade) 95%);
         height: 100%;
         width: 100%;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: #fff;
+        font-family: system-ui, -apple-system, "SF Pro Text", sans-serif;
+        color: var(--text);
+        overflow: hidden;
         overscroll-behavior: none;
+
+        /* iOS / Safari touch hardening */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        touch-action: none;
       }
       #game {
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         display: flex;
         align-items: center;
         justify-content: center;
+        /* Respect iPad / iPhone notch + home indicator. */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        box-sizing: border-box;
       }
       canvas {
         display: block;
         touch-action: none;
+        /* Sharper rendering on retina displays — Phaser's logical buffer
+           gets stretched, this just biases the browser toward bilinear. */
+        image-rendering: auto;
       }
+
       #loader {
         position: fixed;
         inset: 0;
@@ -40,34 +75,66 @@
         align-items: center;
         justify-content: center;
         gap: 22px;
-        background: #0d0f24;
+        background: var(--letterbox-bg)
+          radial-gradient(ellipse at 50% 35%, var(--letterbox-bg-soft) 0%, var(--letterbox-bg-shade) 95%);
         z-index: 9999;
         transition: opacity 220ms ease-out;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        box-sizing: border-box;
       }
-      #loader.fade-out {
-        opacity: 0;
-        pointer-events: none;
-      }
+      #loader.fade-out { opacity: 0; pointer-events: none; }
       .loader-title {
         font-size: 38px;
         font-weight: 700;
         letter-spacing: 0.5px;
-        color: #f6c177;
+        color: var(--accent);
       }
       .loader-subtitle {
         font-size: 14px;
-        color: #9aa0c0;
+        color: var(--text);
+        opacity: 0.8;
       }
       .loader-spinner {
         width: 44px;
         height: 44px;
-        border: 4px solid #1b1f3b;
-        border-top-color: #f6c177;
+        border: 4px solid var(--letterbox-bg-shade);
+        border-top-color: var(--accent);
         border-radius: 50%;
         animation: spin 0.9s linear infinite;
       }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* Portrait → polite "rotate the device" overlay. iPad Safari can't
+         lock orientation, so we just hide the canvas and ask nicely. */
+      #rotate-warning {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9000;
+        background: var(--letterbox-bg)
+          radial-gradient(ellipse at 50% 35%, var(--letterbox-bg-soft) 0%, var(--letterbox-bg-shade) 95%);
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 32px;
+        text-align: center;
+        color: var(--text);
+      }
+      #rotate-warning .rw-icon {
+        font-size: 78px;
+        animation: rotate-hint 2.6s ease-in-out infinite;
+        transform-origin: center;
+      }
+      #rotate-warning .rw-title { font-size: 26px; font-weight: 700; color: var(--accent); }
+      #rotate-warning .rw-sub { font-size: 16px; max-width: 400px; line-height: 1.4; }
+      @keyframes rotate-hint {
+        0%, 60% { transform: rotate(0deg); }
+        80% { transform: rotate(90deg); }
+        100% { transform: rotate(0deg); }
+      }
+      @media (orientation: portrait) and (max-aspect-ratio: 1/1) {
+        #rotate-warning { display: flex; }
       }
     </style>
   </head>
@@ -77,6 +144,11 @@
       <div class="loader-title">NinaNocaWorld</div>
       <div class="loader-spinner"></div>
       <div class="loader-subtitle">lädt …</div>
+    </div>
+    <div id="rotate-warning" aria-hidden="true">
+      <div class="rw-icon">📱</div>
+      <div class="rw-title">Bitte das Gerät drehen</div>
+      <div class="rw-sub">NinaNocaWorld spielt am besten im Querformat. Dreh dein Tablet einfach zur Seite — der Spielplatz wartet schon. ✨</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -22,6 +22,27 @@ function ensureCtx(): AudioContext | null {
   return ctx;
 }
 
+/**
+ * iOS Safari refuses to start an AudioContext until the FIRST tap of any
+ * kind has been processed; even a no-op `resume()` inside a button handler
+ * is sometimes too late if the user's first interaction was a drag. Calling
+ * this at app boot wires a one-shot global listener that pre-creates and
+ * resumes the context on the very first pointer/keyboard event.
+ */
+export function unlockAudioOnFirstGesture(): void {
+  if (typeof window === "undefined") return;
+  const unlock = (): void => {
+    const c = ensureCtx();
+    if (c && c.state !== "running") void c.resume();
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("touchstart", unlock);
+    window.removeEventListener("keydown", unlock);
+  };
+  window.addEventListener("pointerdown", unlock, { once: false, passive: true });
+  window.addEventListener("touchstart", unlock, { once: false, passive: true });
+  window.addEventListener("keydown", unlock, { once: false });
+}
+
 interface ToneOptions {
   type?: OscillatorType;
   freq: number;

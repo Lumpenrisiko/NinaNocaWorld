@@ -401,10 +401,10 @@ export class LocationScene extends Phaser.Scene {
   ): void {
     this.closeActionMenu();
 
-    const PAD = 14;
-    const BUTTON_H = 36;
+    const PAD = 18;
+    const BUTTON_H = 52; // ≥ Apple HIG 44pt minimum, even after FIT-down on iPad
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: "16px",
+      fontSize: "20px",
       color: "#1b1f3b",
       fontStyle: "bold",
     };
@@ -412,7 +412,7 @@ export class LocationScene extends Phaser.Scene {
     // Pre-measure button widths so we can lay them out side by side.
     const widths: number[] = actions.map((a) => {
       const probe = this.add.text(0, 0, `${a.emoji}  ${a.label}`, labelStyle);
-      const w = Math.max(120, Math.ceil(probe.width) + PAD * 2);
+      const w = Math.max(150, Math.ceil(probe.width) + PAD * 2);
       probe.destroy();
       return w;
     });

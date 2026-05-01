@@ -13,6 +13,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Suppress the desktop right-click context menu on the canvas (mirrors
+    // the CSS `-webkit-touch-callout: none` on touch). No-op on touch-only
+    // devices.
+    this.input.mouse?.disableContextMenu();
+
     const loaded = SaveSystem.load();
     GameState.init(loaded ?? createInitialSave());
 

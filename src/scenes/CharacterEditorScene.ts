@@ -65,7 +65,7 @@ export class CharacterEditorScene extends Phaser.Scene {
 
     const carouselsX = panelX + 380;
     let row = panelY + 90;
-    const rowGap = 70;
+    const rowGap = 80;
 
     this.makeCarousel(
       "Hautton",
@@ -131,11 +131,11 @@ export class CharacterEditorScene extends Phaser.Scene {
       },
     );
 
-    const btnY = panelY + panelH - 56;
-    this.makeBigButton(panelX + panelW - 240, btnY, "Übernehmen", COLORS.accent, () =>
+    const btnY = panelY + panelH - 60;
+    this.makeBigButton(panelX + panelW - 250, btnY, "Übernehmen", COLORS.accent, () =>
       this.confirm(),
     );
-    this.makeBigButton(panelX + panelW - 110, btnY, "Abbrechen", COLORS.panelLight, () =>
+    this.makeBigButton(panelX + panelW - 100, btnY, "Abbrechen", COLORS.panelLight, () =>
       this.cancel(),
     );
   }
@@ -158,16 +158,17 @@ export class CharacterEditorScene extends Phaser.Scene {
       .setOrigin(0, 0);
 
     const valueText = this.add
-      .text(x + 110, y + 22, options[initialIndex]!.label, {
+      .text(x + 130, y + 44, options[initialIndex]!.label, {
         fontSize: "20px",
         color: "#f2f2f7",
+        fontStyle: "bold",
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(0.5);
 
     const c: Carousel<T> = { options, index: initialIndex, labelText, valueText };
 
-    this.makeArrow(x + 8, y + 32, "<", () => this.cycle(c, -1, onChange));
-    this.makeArrow(x + 220, y + 32, ">", () => this.cycle(c, 1, onChange));
+    this.makeArrow(x + 26, y + 44, "<", () => this.cycle(c, -1, onChange));
+    this.makeArrow(x + 234, y + 44, ">", () => this.cycle(c, 1, onChange));
   }
 
   private cycle<T extends { id: string; label: string }>(
@@ -183,10 +184,11 @@ export class CharacterEditorScene extends Phaser.Scene {
   }
 
   private makeArrow(x: number, y: number, glyph: string, onClick: () => void): void {
-    const bg = this.add.rectangle(x, y, 28, 28, COLORS.panelLight, 1).setOrigin(0.5);
-    bg.setStrokeStyle(1, COLORS.accent);
+    // 48 px hit area = ≥44 pt Apple HIG even after FIT scales the canvas down.
+    const bg = this.add.rectangle(x, y, 48, 48, COLORS.panelLight, 1).setOrigin(0.5);
+    bg.setStrokeStyle(2, COLORS.accent);
     const text = this.add
-      .text(x, y, glyph, { fontSize: "20px", color: "#ffffff" })
+      .text(x, y, glyph, { fontSize: "26px", color: "#ffffff", fontStyle: "bold" })
       .setOrigin(0.5);
     bg.setInteractive({ useHandCursor: true });
     bg.on("pointerdown", onClick);
@@ -202,9 +204,9 @@ export class CharacterEditorScene extends Phaser.Scene {
     color: number,
     onClick: () => void,
   ): void {
-    const bg = this.add.rectangle(x, y, 110, 36, color, 1).setOrigin(0.5);
-    bg.setStrokeStyle(1, COLORS.text);
-    this.add.text(x, y, text, { fontSize: "13px", color: "#1b1f3b" }).setOrigin(0.5);
+    const bg = this.add.rectangle(x, y, 140, 52, color, 1).setOrigin(0.5);
+    bg.setStrokeStyle(2, COLORS.text);
+    this.add.text(x, y, text, { fontSize: "16px", color: "#1b1f3b", fontStyle: "bold" }).setOrigin(0.5);
     bg.setInteractive({ useHandCursor: true });
     bg.on("pointerdown", onClick);
   }

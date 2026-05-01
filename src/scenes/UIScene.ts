@@ -162,8 +162,8 @@ export class UIScene extends Phaser.Scene {
         ? OutfitCatalog.top(charState.outfit.top).color
         : 0xcccccc;
       const isActive = id === GameState.snapshot.activeCharacterId;
-      xOffset -= 50;
-      const dot = this.add.circle(xOffset, 0, 22, topColor, 1);
+      xOffset -= 60;
+      const dot = this.add.circle(xOffset, 6, 26, topColor, 1);
       dot.setStrokeStyle(isActive ? 4 : 2, isActive ? 0xffffff : 0x000000, isActive ? 1 : 0.4);
       dot.setInteractive({ useHandCursor: true });
       dot.on("pointerdown", () => {
@@ -171,7 +171,7 @@ export class UIScene extends Phaser.Scene {
         GameState.setActiveCharacter(id);
       });
       const label = this.add
-        .text(xOffset, 28, def.name, { fontSize: "12px", color: "#f2f2f7" })
+        .text(xOffset, 38, def.name, { fontSize: "13px", color: "#f2f2f7" })
         .setOrigin(0.5);
       this.charSelector.add([dot, label]);
     }
@@ -184,14 +184,20 @@ export class UIScene extends Phaser.Scene {
   }
 
   private makeEditorButton(): void {
-    const x = 140;
-    const y = 20;
+    const x = 160;
+    const y = 14;
+    const w = 170;
+    const h = 48;
     const bg = this.add
-      .rectangle(x, y, 130, 32, COLORS.accent, 0.95)
+      .rectangle(x, y, w, h, COLORS.accent, 0.95)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, COLORS.text);
+      .setStrokeStyle(2, COLORS.text);
     const text = this.add
-      .text(x + 65, y + 16, "Charakter-Editor", { fontSize: "12px", color: "#1b1f3b" })
+      .text(x + w / 2, y + h / 2, "Charakter-Editor", {
+        fontSize: "15px",
+        color: "#1b1f3b",
+        fontStyle: "bold",
+      })
       .setOrigin(0.5);
     bg.setInteractive({ useHandCursor: true });
     bg.on("pointerdown", () => {
@@ -205,13 +211,17 @@ export class UIScene extends Phaser.Scene {
   }
 
   private makeMuteButton(): void {
-    const x = GAME_WIDTH - 30;
-    const y = 70;
+    const x = GAME_WIDTH - 36;
+    const y = 78;
+    // Tappable circle behind the emoji = real touch target (≥44 px on iPad).
+    const hit = this.add
+      .circle(x, y, 26, COLORS.panelLight, 0.6)
+      .setStrokeStyle(2, COLORS.textDim);
     const btn = this.add
-      .text(x, y, Sound.isMuted() ? "🔇" : "🔊", { fontSize: "26px" })
+      .text(x, y, Sound.isMuted() ? "🔇" : "🔊", { fontSize: "28px" })
       .setOrigin(0.5);
-    btn.setInteractive({ useHandCursor: true });
-    btn.on("pointerdown", () => {
+    hit.setInteractive({ useHandCursor: true });
+    const toggle = (): void => {
       const next = !Sound.isMuted();
       Sound.setMuted(next);
       btn.setText(next ? "🔇" : "🔊");
@@ -221,18 +231,26 @@ export class UIScene extends Phaser.Scene {
       } catch {
         /* storage unavailable */
       }
-    });
+    };
+    hit.on("pointerdown", toggle);
+    hit.on("pointerover", () => hit.setFillStyle(COLORS.accent, 0.7));
+    hit.on("pointerout", () => hit.setFillStyle(COLORS.panelLight, 0.6));
   }
 
   private makeResetButton(): void {
-    const x = 20;
-    const y = 20;
+    const x = 14;
+    const y = 14;
+    const w = 130;
+    const h = 48;
     const bg = this.add
-      .rectangle(x, y, 110, 32, COLORS.panelLight, 0.9)
+      .rectangle(x, y, w, h, COLORS.panelLight, 0.9)
       .setOrigin(0, 0)
-      .setStrokeStyle(1, COLORS.textDim);
+      .setStrokeStyle(2, COLORS.textDim);
     const text = this.add
-      .text(x + 55, y + 16, "Spielstand löschen", { fontSize: "11px", color: "#f2f2f7" })
+      .text(x + w / 2, y + h / 2, "Spielstand löschen", {
+        fontSize: "12px",
+        color: "#f2f2f7",
+      })
       .setOrigin(0.5);
     bg.setInteractive({ useHandCursor: true });
     bg.on("pointerdown", () => {
